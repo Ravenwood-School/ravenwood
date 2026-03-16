@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NWW Ravenwood — Today's Timetable</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#f4f3ef;--sur:#fff;--sur2:#f0ede7;--bdr:#e0dbd2;--tx:#18160f;--tx2:#5a5650;--tx3:#9c9890;--bl:#1a4d8f;--blbg:#e8f0fb;--gn:#1e6b3c;--gnbg:#e6f4ec;--or:#b85c00;--orbg:#fef2e4;--r:10px;--rs:6px}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
+.topbar{background:var(--bl);color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.topbar h1{font-size:16px;font-weight:700}
+.topbar .sub{font-size:11px;opacity:.75}
+.ro-badge{font-size:11px;font-weight:600;background:rgba(255,255,255,.2);padding:4px 10px;border-radius:10px}
+.main{padding:18px 20px;max-width:1200px;margin:0 auto}
+.date-card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.date-card h2{font-size:17px;font-weight:700;color:var(--bl)}
+.date-card p{font-size:13px;color:var(--tx2)}
+.period-pill{font-size:12px;font-weight:600;padding:5px 12px;border-radius:8px;background:var(--orbg);color:var(--or)}
+.alert{padding:10px 14px;border-radius:var(--rs);font-size:13px;margin-bottom:14px;line-height:1.5}
+.al-ok{background:var(--gnbg);color:var(--gn);border:1px solid #b0dcc0}
+.al-warn{background:var(--orbg);color:var(--or);border:1px solid #f5d5a0}
+.al-info{background:var(--blbg);color:var(--bl);border:1px solid #c8dff7}
+.tt-wrap{overflow-x:auto;border-radius:var(--r);border:1px solid var(--bdr);margin-bottom:16px}
+table.tt{width:100%;border-collapse:collapse;background:var(--sur);font-size:12px}
+.tt th{background:var(--sur2);padding:8px;text-align:center;font-weight:600;color:var(--tx2);border:1px solid var(--bdr);font-size:11px;white-space:nowrap}
+.tt th.left{text-align:left;min-width:100px}
+.tt td{border:1px solid var(--bdr);padding:3px;min-width:110px}
+.tt td.day-td{padding:8px 10px;font-size:13px;font-weight:600;background:var(--sur2);white-space:nowrap}
+.tt td.day-td.today{background:var(--blbg);color:var(--bl)}
+.pb{border-radius:5px;padding:6px 8px;min-height:52px;display:flex;flex-direction:column;justify-content:center}
+.pb .s{font-size:12px;font-weight:600;line-height:1.3}
+.pb .t{font-size:10px;opacity:.7;margin-top:2px}
+.pb .sub-b{font-size:10px;font-weight:700;padding:2px 5px;border-radius:3px;margin-top:3px;display:inline-block;background:rgba(184,92,0,.15);color:var(--or)}
+.eng{background:#e6effd;color:#0c3a7a}.math{background:#e6f5ec;color:#145227}
+.hindi{background:#fff0e4;color:#7a3200}.punjabi{background:#f3eaff;color:#4a1278}
+.evs{background:#e0faf0;color:#0a5230}.sci{background:#e0f7fa;color:#005060}
+.sst{background:#fffbe6;color:#6b4200}.ict{background:#ede8ff;color:#3b1d8a}
+.art{background:#fde8f0;color:#7a0a3a}.music{background:#fffad0;color:#5a4200}
+.dance{background:#fde4ef;color:#8a0a50}.pe{background:#dcf0ff;color:#00406a}
+.asm{background:#f0e6ff;color:#3a0a7a}.lib{background:#ede9e4;color:#4a3020}
+.lr{background:#e4f5e4;color:#0a5020}.csk{background:#e0f5f0;color:#005040}
+.rob{background:#e8eaff;color:#1a1d7a}.empty{background:#fafaf8;color:#bbb}
+.sub-period{background:#fff8e1;border:1.5px dashed #ffc107}
+.absent-banner{background:#fce8e8;border:1px solid #f5c0c0;border-radius:var(--r);padding:14px 16px;margin-bottom:14px}
+.absent-banner h3{font-size:14px;font-weight:700;color:#b52828;margin-bottom:6px}
+.absent-banner p{font-size:13px;color:#5a5650;line-height:1.6}
+.footer{text-align:center;font-size:11px;color:var(--tx3);margin-top:24px;padding:16px;border-top:1px solid var(--bdr)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div>
+    <h1 id="schoolName">NWW Ravenwood International School</h1>
+    <div class="sub" id="subTitle">Today's Timetable — View Only</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="ro-badge">👁 Read Only</span>
+    <span style="font-size:12px;background:rgba(255,255,255,.15);padding:4px 11px;border-radius:16px" id="vclock">--:--</span>
+  </div>
+</div>
+
+<div class="main">
+  <div class="date-card">
+    <div>
+      <h2 id="todayTitle">Loading...</h2>
+      <p id="todayDate">--</p>
+    </div>
+    <div id="curPeriodBadge"></div>
+  </div>
+
+  <div id="viewAlerts"></div>
+  <div id="absentBanners"></div>
+  <div id="viewContent"><p style="padding:20px;color:var(--tx3)">Loading timetable...</p></div>
+  <div class="footer">
+    <p>NWW Ravenwood International School — Smart Timetable System 2025-26</p>
+    <p style="margin-top:4px">Read-only view for teachers. For changes contact the Principal.</p>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-database-compat.js"></script>
+<script>
+const DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const PERIODS=['I','II','III','IV','V','VI','VII','VIII'];
+const LEVEL_NAMES={1:'KG',2:'Class 1',3:'Class 2',4:'Class 3',5:'Class 4-5',6:'Class 6',7:'Class 7',8:'Class 8',9:'Class 9',10:'Class 10',11:'Class 11',12:'Class 12'};
+
+let VS={config:{season:'summer',timings:null,school:'NWW Ravenwood International School'},classes:[],teachers:[],leaveRecords:[]};
+const FB_URL=localStorage.getItem('rw_fb_url')||'';
+
+function fmt(t){if(!t)return'';const[h,m]=t.split(':');const hh=+h;return(hh>12?hh-12:hh)+':'+(m||'00')+' '+(hh>=12?'PM':'AM');}
+function today(){return new Date().toISOString().split('T')[0];}
+function todayDay(){const d=new Date().getDay();return d===0?null:DAYS[d-1];}
+
+const DEFAULT_T={summer:[{start:'08:30',end:'09:10'},{start:'09:20',end:'10:00'},{start:'10:00',end:'10:40'},{start:'10:40',end:'11:20'},{start:'11:40',end:'12:15'},{start:'12:15',end:'12:50'},{start:'12:50',end:'13:25'},{start:'13:25',end:'14:00'}],winter:[{start:'09:00',end:'09:40'},{start:'09:50',end:'10:30'},{start:'10:30',end:'11:10'},{start:'11:10',end:'11:50'},{start:'12:10',end:'12:45'},{start:'12:45',end:'13:20'},{start:'13:20',end:'13:55'},{start:'13:55',end:'14:30'}]};
+
+function timings(){const t=VS.config.timings||(DEFAULT_T);return t[VS.config.season||'summer']||[];}
+
+function subjClass(s){
+  if(!s)return'empty';const l=s.toLowerCase();
+  if(l.includes('assembly')||l.includes('yoga'))return'asm';
+  if(l.includes('english'))return'eng';if(l.includes('math'))return'math';
+  if(l.includes('hindi'))return'hindi';if(l.includes('punjabi'))return'punjabi';
+  if(l.includes('evs'))return'evs';if(l.includes('sci'))return'sci';
+  if(l.includes('s.s.t'))return'sst';if(l.includes('ict')||l.includes('icr'))return'ict';
+  if(l.includes('robot'))return'rob';if(l.includes('art'))return'art';
+  if(l.includes('music'))return'music';if(l.includes('dance'))return'dance';
+  if(l.includes('swim')||l.includes('sport')||l.includes('skat'))return'pe';
+  if(l.includes('lib'))return'lib';if(l.includes('l.r'))return'lr';if(l.includes('skill'))return'csk';
+  return'empty';
+}
+
+function init(){
+  if(!FB_URL){
+    document.getElementById('viewContent').innerHTML='<div class="alert al-warn">System not configured yet. Please ask the Principal to set up the system.</div>';
+    return;
+  }
+  try{
+    firebase.initializeApp({databaseURL:FB_URL,apiKey:'demo',projectId:'rw',appId:'1:0:web:0'});
+    const db=firebase.database();
+    db.ref('/').on('value',snap=>{
+      const d=snap.val()||{};
+      if(d.config) VS.config={...VS.config,...d.config};
+      VS.classes=d.classes?Object.values(d.classes):[];
+      VS.teachers=d.teachers?Object.values(d.teachers):[];
+      VS.leaveRecords=d.leaveRecords?Object.values(d.leaveRecords):[];
+      renderView();
+    });
+  }catch(e){
+    document.getElementById('viewContent').innerHTML='<div class="alert al-warn">Could not connect to database. Check your internet connection.</div>';
+  }
+}
+
+function renderView(){
+  const day=todayDay();
+  const now=new Date();
+  document.getElementById('schoolName').textContent=VS.config.school||'NWW Ravenwood International School';
+  document.getElementById('subTitle').textContent='Today\'s Timetable — '+(VS.config.season==='summer'?'☀️ Summer':'❄️ Winter')+' Schedule';
+  document.getElementById('todayTitle').textContent=(day||'Sunday')+' — Today\'s Schedule';
+  document.getElementById('todayDate').textContent=now.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  const T=timings();
+  const nowMin=now.getHours()*60+now.getMinutes();
+  let curP=-1;
+  T.forEach((t,i)=>{
+    if(!t.start||!t.end)return;
+    const[sh,sm]=t.start.split(':').map(Number);
+    const[eh,em]=t.end.split(':').map(Number);
+    if(nowMin>=sh*60+sm&&nowMin<eh*60+em)curP=i;
+  });
+  const cpEl=document.getElementById('curPeriodBadge');
+  cpEl.innerHTML=curP>=0?`<span class="period-pill">⏰ Period ${PERIODS[curP]} running (${fmt(T[curP]?.start)} – ${fmt(T[curP]?.end)})</span>`:'';
+
+  if(!day){
+    document.getElementById('viewContent').innerHTML='<div class="alert al-ok">Today is Sunday — School is closed. See you Monday!</div>';
+    document.getElementById('absentBanners').innerHTML='';
+    return;
+  }
+
+  // Absent banners
+  const todayLeaves=VS.leaveRecords.filter(r=>r.date===today()&&r.approved);
+  const absentTeachers=[...new Set(todayLeaves.map(r=>r.teacher))];
+  let bannerHtml='';
+  absentTeachers.forEach(t=>{
+    const tLeaves=todayLeaves.filter(r=>r.teacher===t);
+    const cls=tLeaves[0]?.cls||'';
+    bannerHtml+=`<div class="absent-banner">
+      <h3>🚫 ${t} is absent today (${tLeaves[0]?.reason||'Leave'})</h3>
+      <p><b>Class ${cls}</b> — Substitutes assigned:<br>
+      ${tLeaves.map(r=>`Period ${PERIODS[r.period]}: <b>${r.subj}</b> → <b style="color:#1e6b3c">${r.sub}</b>`).join(' &nbsp;|&nbsp; ')}</p>
+    </div>`;
+  });
+  document.getElementById('absentBanners').innerHTML=bannerHtml;
+
+  // Full timetable
+  let h='<div class="tt-wrap"><table class="tt"><thead><tr><th class="left">Class / Teacher</th>';
+  PERIODS.forEach((p,i)=>{h+=`<th>${p}<br><span style="font-size:9px;color:var(--tx3)">${fmt(T[i]?.start)}</span></th>`;});
+  h+='</tr></thead><tbody>';
+
+  VS.classes.forEach((cls,ri)=>{
+    const periods=cls.schedule?.[day]||[];
+    h+=`<tr><td class="day-td" style="font-size:12px">${cls.cls}<br><span style="font-size:10px;font-weight:400;color:var(--tx2)">${cls.ct||''}</span></td>`;
+    for(let i=0;i<8;i++){
+      const cell=periods[i];
+      const subj=typeof cell==='string'?cell:(cell?.subj||'');
+      const isNow=i===curP;
+      const lr=todayLeaves.find(r=>r.cls===cls.cls&&r.period===i);
+      const sc=lr?'sub-period':subjClass(subj);
+      h+=`<td style="${isNow?'background:#fffde6':''}">
+        <div class="pb ${sc}" style="${isNow?'border:1.5px solid #f59e0b':''}">
+          <div class="s">${subj||'<span style="color:#bbb">—</span>'}</div>
+          <div class="t">${typeof cell==='string'?cls.ct:(cell?.type==='specialist'?'Specialist':(cell?.teacher||cls.ct))}</div>
+          ${lr?`<span class="sub-b">Sub: ${lr.sub}</span>`:''}
+        </div></td>`;
+    }
+    h+='</tr>';
+  });
+  h+='</tbody></table></div>';
+  document.getElementById('viewContent').innerHTML=h;
+}
+
+setInterval(()=>{
+  const now=new Date();
+  if(document.getElementById('vclock')) document.getElementById('vclock').textContent=now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+},1000);
+setInterval(renderView,60000);
+window.onload=init;
+</script>
+</body>
+</html>
