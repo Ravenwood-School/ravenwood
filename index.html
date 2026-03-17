@@ -1,0 +1,1580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NWW Ravenwood — Timetable System</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f3ef;--sur:#fff;--sur2:#f0ede7;--bdr:#e0dbd2;
+  --tx:#18160f;--tx2:#5a5650;--tx3:#9c9890;
+  --bl:#1a4d8f;--blbg:#e8f0fb;--bll:#c8dff7;
+  --gn:#1e6b3c;--gnbg:#e6f4ec;
+  --rd:#b52828;--rdbg:#fce8e8;
+  --or:#b85c00;--orbg:#fef2e4;
+  --r:10px;--rs:6px;
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;font-size:14px}
+#syncBar{padding:6px 16px;font-size:12px;font-weight:600;text-align:center;display:none}
+#syncBar.ok{background:var(--gnbg);color:var(--gn);display:block}
+#syncBar.saving{background:var(--blbg);color:var(--bl);display:block}
+#syncBar.off{background:var(--orbg);color:var(--or);display:block}
+#syncBar.err{background:var(--rdbg);color:var(--rd);display:block}
+
+/* LOGIN */
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh}
+.login-box{background:var(--sur);border:1px solid var(--bdr);border-radius:16px;padding:38px 34px;width:320px;text-align:center}
+.login-logo{width:64px;height:64px;background:var(--bl);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:800;margin:0 auto 14px}
+.login-box h2{font-size:17px;font-weight:700;margin-bottom:3px}
+.login-sub{font-size:12px;color:var(--tx2);margin-bottom:22px}
+.pin-dots{display:flex;justify-content:center;gap:12px;margin-bottom:20px}
+.pin-dot{width:13px;height:13px;border-radius:50%;border:2px solid var(--bdr);transition:all .2s}
+.pin-dot.filled{background:var(--bl);border-color:var(--bl)}
+.pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px}
+.pin-btn{padding:13px;border:1px solid var(--bdr);border-radius:var(--rs);background:var(--sur);font-size:17px;font-weight:600;cursor:pointer;color:var(--tx);transition:all .15s}
+.pin-btn:hover{background:var(--blbg);border-color:var(--bl)}
+.pin-btn.wide{grid-column:span 2}
+.pin-err{color:var(--rd);font-size:12px;min-height:16px;margin-top:4px}
+.login-footer{font-size:10px;color:var(--tx3);margin-top:14px;padding-top:12px;border-top:1px solid var(--bdr)}
+
+/* APP */
+#appScreen{display:none}
+.topbar{background:var(--bl);color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.topbar h1{font-size:15px;font-weight:700}
+.topbar .sub{font-size:11px;opacity:.75}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.season-pill{font-size:11px;font-weight:600;padding:3px 10px;border-radius:10px}
+.season-summer{background:#fff3cd;color:#7a4b00}
+.season-winter{background:#dbeafe;color:#1e3a8a}
+.clock-pill{font-size:12px;font-weight:500;background:rgba(255,255,255,.15);padding:4px 11px;border-radius:16px}
+.btn-logout{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:5px 11px;border-radius:var(--rs);font-size:12px;cursor:pointer}
+
+/* NAV */
+.nav{background:var(--sur);border-bottom:1px solid var(--bdr);display:flex;overflow-x:auto;padding:0 14px}
+.nav-btn{padding:12px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;color:var(--tx2);border-bottom:2.5px solid transparent;white-space:nowrap;transition:all .15s}
+.nav-btn.active{color:var(--bl);border-bottom-color:var(--bl)}
+.nav-btn:hover:not(.active){color:var(--tx);background:var(--bg)}
+
+.main{padding:18px 20px;max-width:1400px}
+.sec{display:none}.sec.active{display:block}
+
+/* CONTROLS */
+.ctrl{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+select,input[type=text],input[type=tel],input[type=date],input[type=time],input[type=password],input[type=number]{padding:7px 11px;border:1px solid var(--bdr);border-radius:var(--rs);background:var(--sur);color:var(--tx);font-size:13px;outline:none}
+select:focus,input:focus{border-color:var(--bl)}
+.btn{padding:7px 14px;border-radius:var(--rs);font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--bdr);background:var(--sur);color:var(--tx);transition:all .15s;white-space:nowrap}
+.btn:hover{background:var(--sur2)}
+.btn-blue{background:var(--bl);color:#fff;border-color:var(--bl)}.btn-blue:hover{background:#153f75}
+.btn-green{background:var(--gnbg);color:var(--gn);border-color:#b0dcc0}
+.btn-red{background:var(--rdbg);color:var(--rd);border-color:#f5c0c0}
+.btn-orange{background:var(--orbg);color:var(--or);border-color:#f5d5a0}
+.btn-sm{padding:4px 9px;font-size:12px}
+
+/* TIMETABLE */
+.tt-wrap{overflow-x:auto;border-radius:var(--r);border:1px solid var(--bdr)}
+table.tt{width:100%;border-collapse:collapse;background:var(--sur);font-size:11.5px}
+.tt th{background:var(--sur2);padding:7px 8px;text-align:center;font-weight:600;color:var(--tx2);border:1px solid var(--bdr);white-space:nowrap;font-size:11px}
+.tt th.left{text-align:left;min-width:100px}
+.tt td{border:1px solid var(--bdr);padding:2px;vertical-align:top;min-width:110px}
+.tt td.day-td{padding:7px 10px;font-size:13px;font-weight:600;background:var(--sur2);white-space:nowrap;vertical-align:middle}
+.tt td.day-td.today{background:var(--blbg);color:var(--bl)}
+.pb{border-radius:5px;padding:5px 7px;min-height:50px;display:flex;flex-direction:column;justify-content:center;cursor:pointer;transition:opacity .15s}
+.pb:hover{opacity:.82}
+.pb .s{font-size:12px;font-weight:600;line-height:1.3}
+.pb .t{font-size:10px;opacity:.7;margin-top:1px}
+.pb .tbadge{font-size:9px;font-weight:700;padding:1px 4px;border-radius:3px;margin-top:2px;display:inline-block}
+.pb .subbadge{font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;margin-top:2px;display:inline-block;background:rgba(184,92,0,.15);color:var(--or)}
+.eng{background:#e6effd;color:#0c3a7a}.math{background:#e6f5ec;color:#145227}
+.hindi{background:#fff0e4;color:#7a3200}.punjabi{background:#f3eaff;color:#4a1278}
+.evs{background:#e0faf0;color:#0a5230}.sci{background:#e0f7fa;color:#005060}
+.sst{background:#fffbe6;color:#6b4200}.ict{background:#ede8ff;color:#3b1d8a}
+.art{background:#fde8f0;color:#7a0a3a}.music{background:#fffad0;color:#5a4200}
+.dance{background:#fde4ef;color:#8a0a50}.pe{background:#dcf0ff;color:#00406a}
+.asm{background:#f0e6ff;color:#3a0a7a}.lib{background:#ede9e4;color:#4a3020}
+.lr{background:#e4f5e4;color:#0a5020}.csk{background:#e0f5f0;color:#005040}
+.rob{background:#e8eaff;color:#1a1d7a}.empty{background:#fafaf8;color:#bbb}
+.sub-period{background:#fff8e1;border:1.5px dashed #ffc107}
+
+/* CARDS */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:11px}
+.card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:13px;transition:box-shadow .15s}
+.card:hover{box-shadow:0 2px 8px rgba(0,0,0,.07)}
+.card.leave-active{border-color:#f5c0c0;background:var(--rdbg)}
+.card.add-new{border-style:dashed;cursor:pointer;display:flex;align-items:center;justify-content:center;min-height:120px;color:var(--tx3);flex-direction:column;gap:6px}
+.card.add-new:hover{background:var(--blbg);color:var(--bl)}
+.avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;margin-bottom:8px}
+
+/* ALERTS */
+.alert{padding:10px 14px;border-radius:var(--rs);font-size:13px;margin-bottom:12px;line-height:1.5}
+.al-ok{background:var(--gnbg);color:var(--gn);border:1px solid #b0dcc0}
+.al-warn{background:var(--orbg);color:var(--or);border:1px solid #f5d5a0}
+.al-info{background:var(--blbg);color:var(--bl);border:1px solid var(--bll)}
+.al-err{background:var(--rdbg);color:var(--rd);border:1px solid #f5c0c0}
+
+/* MODALS */
+.modal-wrap{background:rgba(0,0,0,.45);border-radius:var(--r);padding:18px;margin-bottom:18px;display:none}
+.modal-wrap.open{display:block}
+.modal-box{background:var(--sur);border-radius:var(--r);padding:22px;max-width:600px;margin:0 auto}
+.modal-box h3{font-size:15px;font-weight:700;margin-bottom:16px}
+.fg{margin-bottom:12px}
+.fg label{display:block;font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:4px}
+.fg input,.fg select,.fg textarea{width:100%;padding:8px 11px;border:1px solid var(--bdr);border-radius:var(--rs);font-size:13px;background:var(--sur);color:var(--tx)}
+.fg2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+
+/* PILLS */
+.pill-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.pill{padding:4px 10px;border-radius:16px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;background:var(--blbg);color:var(--bl);border:1px solid var(--bll)}
+.pill .x{cursor:pointer;color:var(--rd);font-size:13px}
+
+/* LEVEL GRID */
+.level-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:6px;margin-top:8px}
+.level-btn{padding:6px 4px;border:1px solid var(--bdr);border-radius:var(--rs);background:var(--sur);font-size:11.5px;cursor:pointer;text-align:center;color:var(--tx2);transition:all .15s;font-weight:500}
+.level-btn.selected{background:var(--bl);color:#fff;border-color:var(--bl)}
+
+/* LEAVE */
+.leave-period-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bdr);flex-wrap:wrap}
+.leave-period-row:last-child{border:none}
+.sub-table{width:100%;border-collapse:collapse;background:var(--sur);font-size:13px}
+.sub-table th{background:var(--sur2);padding:9px 12px;text-align:left;font-size:12px;font-weight:600;color:var(--tx2);border-bottom:1px solid var(--bdr)}
+.sub-table td{padding:9px 12px;border-bottom:1px solid var(--bdr)}
+.sub-table tr:last-child td{border:none}
+.sub-table tr:hover td{background:var(--sur2)}
+
+/* TIMING */
+.time-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bdr);flex-wrap:wrap}
+.time-row:last-child{border:none}
+.time-row .lbl{font-size:13px;font-weight:600;min-width:80px}
+
+/* CLASS LABEL */
+.cls-label{font-size:11px;font-weight:600;padding:2px 7px;border-radius:6px;background:var(--sur2);color:var(--tx2);display:inline-block}
+
+@media(max-width:640px){.main,.topbar{padding:12px}.fg2,.fg3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="syncBar"></div>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">R</div>
+    <h2 id="loginTitle">NWW Ravenwood International School</h2>
+    <div class="login-sub">Admin / Principal Access Only</div>
+    <div class="pin-dots">
+      <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-grid">
+      <button class="pin-btn" onclick="pp('1')">1</button><button class="pin-btn" onclick="pp('2')">2</button><button class="pin-btn" onclick="pp('3')">3</button>
+      <button class="pin-btn" onclick="pp('4')">4</button><button class="pin-btn" onclick="pp('5')">5</button><button class="pin-btn" onclick="pp('6')">6</button>
+      <button class="pin-btn" onclick="pp('7')">7</button><button class="pin-btn" onclick="pp('8')">8</button><button class="pin-btn" onclick="pp('9')">9</button>
+      <button class="pin-btn" onclick="pp('0')">0</button><button class="pin-btn wide" onclick="pc()">⌫ Clear</button>
+    </div>
+    <div class="pin-err" id="pinErr"></div>
+    <div class="login-footer">🔒 Authorised staff only — NWW Ravenwood International School</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appScreen">
+  <div class="topbar">
+    <div>
+      <h1 id="topName">NWW Ravenwood International School</h1>
+      <div class="sub" id="topYear">Smart Timetable System — 2025-26</div>
+    </div>
+    <div class="topbar-right">
+      <span id="seasonPill" class="season-pill season-summer">☀️ Summer</span>
+      <span class="clock-pill" id="clock">--:--</span>
+      <button class="btn-logout" onclick="logout()">Logout</button>
+    </div>
+  </div>
+  <div class="nav">
+    <button class="nav-btn active" onclick="showTab('morning',this)">🌅 Morning Summary</button>
+    <button class="nav-btn" onclick="showTab('tt',this)">📅 Timetable</button>
+    <button class="nav-btn" onclick="showTab('teachers',this)">👥 Teachers</button>
+    <button class="nav-btn" onclick="showTab('leave',this)">🏖 Leave & Subs</button>
+    <button class="nav-btn" onclick="showTab('waimg',this)">📲 WhatsApp Image</button>
+    <button class="nav-btn" onclick="showTab('settings',this)">⚙️ Settings</button>
+  </div>
+  <div class="main">
+    <div id="gAlerts"></div>
+
+    <!-- MORNING -->
+    <div class="sec active" id="sec-morning">
+      <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:18px;margin-bottom:14px">
+        <h3 id="mornTitle" style="font-size:16px;font-weight:700;margin-bottom:4px">📋 Morning Summary</h3>
+        <div id="mornDate" style="font-size:13px;color:var(--tx2);margin-bottom:14px"></div>
+        <div id="mornContent"></div>
+      </div>
+      <div id="pendingPanel" style="display:none;background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:18px;margin-bottom:14px">
+        <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">⏳ Pending Approvals</h3>
+        <div id="pendingList"></div>
+      </div>
+      <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:18px">
+        <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">✅ Today's Substitutes</h3>
+        <div id="approvedList"><p style="font-size:13px;color:var(--tx3)">No substitutes today.</p></div>
+      </div>
+    </div>
+
+    <!-- TIMETABLE -->
+    <div class="sec" id="sec-tt">
+      <div class="ctrl">
+        <select id="ttCls" onchange="renderTT()"></select>
+        <select id="ttDay" onchange="renderTT()">
+          <option value="">All Days</option>
+          <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
+          <option>Thursday</option><option>Friday</option><option>Saturday</option>
+        </select>
+        <button class="btn btn-blue" onclick="openAddClass()">+ Add Class</button>
+        <button class="btn btn-red btn-sm" onclick="delClass()">🗑 Delete</button>
+        <button class="btn btn-sm" onclick="window.print()">🖨 Print</button>
+      </div>
+      <div id="ttInfo" style="margin-bottom:10px"></div>
+      <div class="tt-wrap" id="ttGrid"></div>
+
+      <!-- Edit period modal -->
+      <div class="modal-wrap" id="editPeriodModal">
+        <div class="modal-box">
+          <h3 id="epTitle">Edit Period</h3>
+          <div class="fg"><label>Subject</label><select id="epSubj" onchange="checkConflict()"></select></div>
+          <div class="fg"><label>Period Type</label>
+            <select id="epType" onchange="checkConflict()">
+              <option value="ct">Class Teacher (CT teaches this)</option>
+              <option value="specialist">Specialist Teacher (own teacher)</option>
+              <option value="visiting">Visiting CT (another CT)</option>
+            </select>
+          </div>
+          <div class="fg" id="epTeacherFg" style="display:none"><label>Specialist / Visiting Teacher</label>
+            <select id="epTeacher" onchange="checkConflict()"><option value="">-- Select --</option></select>
+          </div>
+          <div id="conflictBox" style="display:none;background:var(--rdbg);border:1px solid #f5c0c0;border-radius:var(--rs);padding:12px;margin-top:8px;font-size:12.5px;color:var(--rd)">
+            <b>⚠️ Conflict:</b> <span id="conflictMsg"></span>
+            <div id="suggestBox" style="display:none;background:var(--gnbg);border:1px solid #b0dcc0;border-radius:var(--rs);padding:10px;margin-top:8px;color:var(--gn)">
+              <p style="font-weight:600;margin-bottom:6px">✅ Available teachers:</p>
+              <div id="suggestList"></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:9px;margin-top:14px">
+            <button class="btn btn-blue" onclick="saveEP()">Save</button>
+            <button class="btn" onclick="closeModal('editPeriodModal')">Cancel</button>
+            <button class="btn btn-red btn-sm" onclick="clearEP()">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add class modal -->
+      <div class="modal-wrap" id="addClassModal">
+        <div class="modal-box">
+          <h3>Add New Class / Section</h3>
+          <div class="fg3">
+            <div class="fg"><label>Class Number</label>
+              <select id="ncNum">
+                <option value="KG">KG</option>
+                <option value="1">Class 1</option><option value="2">Class 2</option>
+                <option value="3">Class 3</option><option value="4">Class 4</option>
+                <option value="5">Class 5</option><option value="6">Class 6</option>
+                <option value="7">Class 7</option><option value="8">Class 8</option>
+                <option value="9">Class 9</option><option value="10">Class 10</option>
+                <option value="11">Class 11</option><option value="12">Class 12</option>
+              </select>
+            </div>
+            <div class="fg"><label>Section Name</label><input type="text" id="ncSection" placeholder="e.g. ARCTIC or A"></div>
+            <div class="fg"><label>Level (1–12)</label><input type="number" id="ncLevel" min="1" max="12" value="1"></div>
+          </div>
+          <div class="fg"><label>Class Teacher</label><select id="ncCT"></select></div>
+          <p style="font-size:12px;color:var(--tx2);margin-top:4px">Display will show as: <b id="ncPreview">Class 6 — ARCTIC</b></p>
+          <div style="display:flex;gap:9px;margin-top:14px">
+            <button class="btn btn-blue" onclick="saveNewClass()">Add Class</button>
+            <button class="btn" onclick="closeModal('addClassModal')">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TEACHERS -->
+    <div class="sec" id="sec-teachers">
+      <div class="ctrl">
+        <input type="text" id="tSearch" placeholder="Search teacher..." oninput="renderTeachers()" style="width:180px">
+        <button class="btn btn-blue" onclick="openAddTeacher()">+ Add Teacher</button>
+      </div>
+      <div class="cards" id="teacherCards"></div>
+      <div class="modal-wrap" id="teacherModal">
+        <div class="modal-box">
+          <h3 id="tmTitle">Add Teacher</h3>
+          <div class="fg2">
+            <div class="fg"><label>Full Name</label><input type="text" id="tmName" placeholder="e.g. Ms. Priya Sharma"></div>
+            <div class="fg"><label>Mobile Number</label><input type="tel" id="tmPhone" maxlength="10" placeholder="10 digits"></div>
+          </div>
+          <div class="fg2">
+            <div class="fg"><label>Role</label><input type="text" id="tmRole" placeholder="e.g. Primary Teacher"></div>
+            <div class="fg"><label>Class Teacher of</label><select id="tmCT"></select></div>
+          </div>
+          <div class="fg">
+            <label>Subjects Can Teach</label>
+            <div style="display:flex;gap:6px;margin-top:4px">
+              <select id="tmSubjSel" style="flex:1"></select>
+              <button class="btn btn-green btn-sm" onclick="addTSubj()">+ Add</button>
+            </div>
+            <div id="tmSubjList" class="pill-list"></div>
+          </div>
+          <div class="fg">
+            <label>Class Level Range (can teach from → to)</label>
+            <div class="fg2" style="margin-top:4px">
+              <div class="fg" style="margin:0">
+                <label style="font-size:11px">From (Min)</label>
+                <select id="tmMinLevel" onchange="updateLevelGrid()">
+                  <option value="1">KG / Nursery</option><option value="2">Class 1</option>
+                  <option value="3">Class 2</option><option value="4">Class 3</option>
+                  <option value="5">Class 4-5</option><option value="6">Class 6</option>
+                  <option value="7">Class 7</option><option value="8">Class 8</option>
+                  <option value="9">Class 9</option><option value="10">Class 10</option>
+                  <option value="11">Class 11</option><option value="12">Class 12</option>
+                </select>
+              </div>
+              <div class="fg" style="margin:0">
+                <label style="font-size:11px">To (Max)</label>
+                <select id="tmMaxLevel" onchange="updateLevelGrid()">
+                  <option value="1">KG / Nursery</option><option value="2">Class 1</option>
+                  <option value="3">Class 2</option><option value="4">Class 3</option>
+                  <option value="5" selected>Class 4-5</option><option value="6">Class 6</option>
+                  <option value="7">Class 7</option><option value="8">Class 8</option>
+                  <option value="9">Class 9</option><option value="10">Class 10</option>
+                  <option value="11">Class 11</option><option value="12">Class 12</option>
+                </select>
+              </div>
+            </div>
+            <div class="level-grid" id="levelGrid"></div>
+          </div>
+          <div class="fg">
+            <label>Specialist Type</label>
+            <select id="tmSpecialist">
+              <option value="0">No — Regular Class/Subject Teacher</option>
+              <option value="art">Yes — Art Teacher</option>
+              <option value="music">Yes — Music Teacher</option>
+              <option value="dance">Yes — Dance Teacher</option>
+              <option value="ict">Yes — ICT / Computer Teacher</option>
+              <option value="pe">Yes — PE / Sports / Swimming / Skating</option>
+              <option value="lib">Yes — Library Teacher</option>
+              <option value="other">Yes — Other Specialist</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:9px;margin-top:16px;flex-wrap:wrap">
+            <button class="btn btn-blue" onclick="saveTeacher()">Save</button>
+            <button class="btn" onclick="closeModal('teacherModal')">Cancel</button>
+            <button class="btn btn-red" id="tmDelBtn" onclick="delTeacher()" style="display:none">🗑 Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEAVE -->
+    <div class="sec" id="sec-leave">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+        <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:18px">
+          <h3 style="font-size:15px;font-weight:700;margin-bottom:14px">Mark Teacher on Leave</h3>
+          <div class="alert al-info" style="font-size:12.5px;margin-bottom:14px">Only principal can mark leave. Review substitutes then approve.</div>
+          <div class="fg"><label>Absent Teacher</label><select id="lvTeacher" onchange="buildLeavePreview()"></select></div>
+          <div class="fg2">
+            <div class="fg"><label>Date</label><input type="date" id="lvDate" onchange="buildLeavePreview()"></div>
+            <div class="fg"><label>Reason</label>
+              <select id="lvReason">
+                <option>Sick Leave</option><option>Personal Leave</option>
+                <option>Official Duty</option><option>Emergency</option>
+                <option>Maternity Leave</option><option>Other</option>
+              </select>
+            </div>
+          </div>
+          <!-- HALF DAY OPTION -->
+          <div class="fg">
+            <label>Leave Type</label>
+            <select id="lvType" onchange="buildLeavePreview()">
+              <option value="full">Full Day — All periods</option>
+              <option value="half_am">Half Day Morning — Present in afternoon</option>
+              <option value="half_pm">Half Day Afternoon — Present in morning</option>
+              <option value="custom">Custom — Select specific periods</option>
+            </select>
+          </div>
+          <div id="customPeriodsBox" style="display:none;margin-bottom:12px">
+            <label style="font-size:12px;font-weight:600;color:var(--tx2);display:block;margin-bottom:6px">Select absent periods:</label>
+            <div style="display:flex;flex-wrap:wrap;gap:6px" id="customPeriodsBtns"></div>
+          </div>
+          <button class="btn btn-blue" style="width:100%" onclick="markLeave()">Generate Substitute Plan →</button>
+        </div>
+        <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:18px">
+          <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">Substitute Preview</h3>
+          <div id="leavePreview"><p style="font-size:13px;color:var(--tx3)">Select teacher and date to preview.</p></div>
+        </div>
+      </div>
+      <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">All Leave Records</h3>
+      <div style="overflow-x:auto;border-radius:var(--r);border:1px solid var(--bdr)">
+        <table class="sub-table">
+          <thead><tr><th>Date</th><th>Teacher</th><th>Class</th><th>Period</th><th>Type</th><th>Subject</th><th>Substitute</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="leaveTbody"><tr><td colspan="9" style="padding:18px;text-align:center;color:var(--tx3)">No leave records yet.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- WA IMAGE -->
+    <div class="sec" id="sec-waimg">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+        <div>
+          <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:18px;margin-bottom:14px">
+            <h3 style="font-size:15px;font-weight:700;margin-bottom:12px">Generate WhatsApp Image</h3>
+            <p style="font-size:12.5px;color:var(--tx2);margin-bottom:14px">System generates a complete visual table. Download and send in WhatsApp group.</p>
+            <div class="fg"><label>Date</label><input type="date" id="waDate"></div>
+            <div class="fg"><label>Title</label><input type="text" id="waTitle" placeholder="e.g. Substitute Arrangement — Monday"></div>
+            <button class="btn btn-blue" style="width:100%;margin-bottom:10px" onclick="generateWAImage()">🖼 Generate Image</button>
+            <button class="btn" style="width:100%;background:#128C7E;color:#fff;border-color:#128C7E;display:none" id="waDownBtn" onclick="downloadWAImage()">⬇️ Download for WhatsApp</button>
+          </div>
+          <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:16px">
+            <p style="font-size:13px;font-weight:700;margin-bottom:8px">Steps to send:</p>
+            <ol style="font-size:13px;color:var(--tx2);line-height:2;padding-left:18px">
+              <li>Click Generate Image</li>
+              <li>Click Download</li>
+              <li>Open Teachers WhatsApp Group</li>
+              <li>Attach photo → select downloaded image → Send</li>
+            </ol>
+          </div>
+        </div>
+        <div>
+          <h3 style="font-size:14px;font-weight:700;margin-bottom:10px">Preview</h3>
+          <div id="waPreviewWrap" style="background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:12px;min-height:200px;display:flex;align-items:center;justify-content:center">
+            <p style="font-size:13px;color:var(--tx3)">Preview appears here after generating.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="sec" id="sec-settings">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+        <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:18px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+            <h3 style="font-size:15px;font-weight:700">Period Timings</h3>
+            <div style="display:flex;gap:7px">
+              <button class="btn btn-sm" id="btnSummer" onclick="loadSeason('summer')">☀️ Summer</button>
+              <button class="btn btn-sm" id="btnWinter" onclick="loadSeason('winter')">❄️ Winter</button>
+              <button class="btn btn-blue btn-sm" onclick="saveTimings()">Save</button>
+            </div>
+          </div>
+          <p style="font-size:12px;color:var(--tx2);margin-bottom:12px">Active: <b id="curSeason">—</b></p>
+          <div id="timingEditor"></div>
+          <h4 style="font-size:13px;font-weight:700;margin:14px 0 8px">Break Times</h4>
+          <div class="fg2">
+            <div class="fg"><label>Fruit Break</label><div style="display:flex;gap:5px"><input type="time" id="fruitS" style="flex:1"><input type="time" id="fruitE" style="flex:1"></div></div>
+            <div class="fg"><label>Lunch Break</label><div style="display:flex;gap:5px"><input type="time" id="lunchS" style="flex:1"><input type="time" id="lunchE" style="flex:1"></div></div>
+          </div>
+        </div>
+        <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:18px">
+          <h3 style="font-size:15px;font-weight:700;margin-bottom:14px">Subjects Manager</h3>
+          <div style="display:flex;gap:7px;margin-bottom:12px">
+            <input type="text" id="newSubj" placeholder="Add new subject..." style="flex:1" onkeydown="if(event.key==='Enter')addSubject()">
+            <button class="btn btn-blue" onclick="addSubject()">+ Add</button>
+          </div>
+          <div id="subjList" class="pill-list"></div>
+        </div>
+        <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:18px">
+          <h3 style="font-size:15px;font-weight:700;margin-bottom:14px">Change PIN</h3>
+          <div class="fg"><label>Current PIN</label><input type="password" id="curPin" maxlength="4"></div>
+          <div class="fg"><label>New PIN</label><input type="password" id="newPin" maxlength="4"></div>
+          <div class="fg"><label>Confirm New PIN</label><input type="password" id="conPin" maxlength="4"></div>
+          <button class="btn btn-blue" onclick="changePin()">Update PIN</button>
+          <div id="pinMsg" style="font-size:12px;margin-top:7px"></div>
+        </div>
+        <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:18px">
+          <h3 style="font-size:15px;font-weight:700;margin-bottom:14px">School Info</h3>
+          <div class="fg"><label>School Name</label><input type="text" id="setSchool"></div>
+          <div class="fg"><label>Academic Year</label><input type="text" id="setYear"></div>
+          <div class="fg"><label>Teacher View Link</label>
+            <input type="text" id="setViewLink" readonly style="color:var(--bl);font-size:12px">
+            <p style="font-size:11px;color:var(--tx3);margin-top:3px">Share with all teachers — read only, no PIN</p>
+          </div>
+          <button class="btn btn-blue" onclick="saveSchoolInfo()">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@9.23.0/firebase-database-compat.js"></script>
+<script>
+// ══════════════════════════════════════════════════════════
+//  HARDCODED FIREBASE — no setup screen needed
+// ══════════════════════════════════════════════════════════
+const FB_URL = 'https://ravenwood-timetable-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const PERIODS = ['I','II','III','IV','V','VI','VII','VIII'];
+const LEVEL_NAMES = {1:'KG',2:'Class 1',3:'Class 2',4:'Class 3',5:'Class 4-5',6:'Class 6',7:'Class 7',8:'Class 8',9:'Class 9',10:'Class 10',11:'Class 11',12:'Class 12'};
+
+const DEFAULT_TIMINGS = {
+  summer:[
+    {label:'Period I',start:'08:30',end:'09:10'},{label:'Period II',start:'09:20',end:'10:00'},
+    {label:'Period III',start:'10:00',end:'10:40'},{label:'Period IV',start:'10:40',end:'11:20'},
+    {label:'Period V',start:'11:40',end:'12:15'},{label:'Period VI',start:'12:15',end:'12:50'},
+    {label:'Period VII',start:'12:50',end:'13:25'},{label:'Period VIII',start:'13:25',end:'14:00'}
+  ],
+  winter:[
+    {label:'Period I',start:'09:00',end:'09:40'},{label:'Period II',start:'09:50',end:'10:30'},
+    {label:'Period III',start:'10:30',end:'11:10'},{label:'Period IV',start:'11:10',end:'11:50'},
+    {label:'Period V',start:'12:10',end:'12:45'},{label:'Period VI',start:'12:45',end:'13:20'},
+    {label:'Period VII',start:'13:20',end:'13:55'},{label:'Period VIII',start:'13:55',end:'14:30'}
+  ],
+  breaks:{fruitS:'09:10',fruitE:'09:20',lunchS:'11:20',lunchE:'11:40'}
+};
+
+const DEFAULT_SUBJECTS = ['Assembly/Yoga','English','Maths','Hindi','Punjabi','EVS','Science',
+  'S.S.T','ICT (R)','ICT (P)','ICT (T)','Robotics ICT','Art','Music','Dance',
+  'Library','Skating','Swimming/Sports','L.R','C.Skills','Free Period'];
+
+// ── STATE ──
+let DB = null;
+let S = {
+  config:{pin:'1234',school:'NWW Ravenwood International School',year:'2025-26',season:'summer',timings:JSON.parse(JSON.stringify(DEFAULT_TIMINGS))},
+  subjects:[...DEFAULT_SUBJECTS],
+  teachers:[],classes:[],leaveRecords:[]
+};
+let editingTeacher=null, editingSubjs=[], editingCell=null, manualOverrides={};
+let selectedCustomPeriods=new Set();
+
+// ── FIREBASE INIT ──
+function initApp(){
+  try{
+    firebase.initializeApp({databaseURL:FB_URL,apiKey:'AIzaSyDemo',projectId:'ravenwood-timetable',appId:'1:0:web:0'});
+    DB=firebase.database();
+    setSyncBar('saving','Connecting...');
+    DB.ref('/').on('value',snap=>{
+      const d=snap.val()||{};
+      mergeState(d);
+      setSyncBar('ok','🟢 Live sync active');
+      document.getElementById('loginScreen').style.display='flex';
+      if(document.getElementById('appScreen').style.display==='block') refreshAll();
+    },err=>setSyncBar('off','⚠️ Disconnected — retrying...'));
+    DB.ref('.info/connected').on('value',snap=>{
+      if(!snap.val())setSyncBar('off','⚠️ Offline');
+      else setSyncBar('ok','🟢 Live sync active');
+    });
+  }catch(e){
+    setSyncBar('err','Connection failed: '+e.message);
+    document.getElementById('loginScreen').style.display='flex';
+  }
+}
+
+function mergeState(d){
+  if(d.config)S.config={...S.config,...d.config,timings:d.config.timings||S.config.timings};
+  if(d.subjects)S.subjects=Object.values(d.subjects);
+  S.teachers=d.teachers?Object.values(d.teachers):[];
+  S.classes=d.classes?Object.values(d.classes):[];
+  S.leaveRecords=d.leaveRecords?Object.values(d.leaveRecords):[];
+}
+
+function setSyncBar(state,msg){
+  const b=document.getElementById('syncBar');
+  b.className=state;b.textContent=msg;b.style.display='block';
+}
+
+async function fbSet(path,val){
+  if(!DB)return;setSyncBar('saving','Saving...');
+  try{await DB.ref(path).set(val);setSyncBar('ok','🟢 Saved & synced');}
+  catch(e){setSyncBar('err','Save failed: '+e.message);}
+}
+async function fbPush(path,val){
+  if(!DB)return{key:'local'+Date.now()};setSyncBar('saving','Saving...');
+  try{const r=await DB.ref(path).push(val);setSyncBar('ok','🟢 Saved');return r;}
+  catch(e){setSyncBar('err','Save failed');return{key:'err'};}
+}
+async function fbDel(path){
+  if(!DB)return;
+  try{await DB.ref(path).remove();setSyncBar('ok','🟢 Deleted');}
+  catch(e){setSyncBar('err','Delete failed');}
+}
+
+// ── INIT ON FIRST FIREBASE DATA ──
+let appInitialized=false;
+function onFirstLoad(){
+  if(appInitialized)return;
+  appInitialized=true;
+  // If no data in Firebase yet, seed it
+  if(!S.teachers.length&&!S.classes.length){
+    seedFirebase();
+  }
+}
+
+async function seedFirebase(){
+  await DB.ref('config').set({pin:'1234',school:'NWW Ravenwood International School',year:'2025-26',season:'summer',timings:DEFAULT_TIMINGS});
+  await DB.ref('subjects').set(Object.fromEntries(DEFAULT_SUBJECTS.map((s,i)=>[i,s])));
+  await DB.ref('classes').set(Object.fromEntries(DEFAULT_CLASSES.map((c,i)=>['c'+i,c])));
+  await DB.ref('teachers').set(Object.fromEntries(DEFAULT_TEACHERS.map((t,i)=>[t.id,t])));
+}
+
+// ── PIN LOGIN ──
+let pinEntry='';
+function pp(d){
+  if(pinEntry.length>=4)return;
+  pinEntry+=d;
+  for(let i=0;i<4;i++)document.getElementById('pd'+i).classList.toggle('filled',i<pinEntry.length);
+  if(pinEntry.length===4){
+    if(pinEntry===S.config.pin){
+      document.getElementById('loginScreen').style.display='none';
+      document.getElementById('appScreen').style.display='block';
+      initUI();
+    }else{
+      document.getElementById('pinErr').textContent='Incorrect PIN. Try again.';
+      pinEntry='';for(let i=0;i<4;i++)document.getElementById('pd'+i).classList.remove('filled');
+    }
+  }else document.getElementById('pinErr').textContent='';
+}
+function pc(){pinEntry='';for(let i=0;i<4;i++)document.getElementById('pd'+i).classList.remove('filled');}
+function logout(){document.getElementById('appScreen').style.display='none';document.getElementById('loginScreen').style.display='flex';pinEntry='';pc();}
+
+// ── HELPERS ──
+function today(){return new Date().toISOString().split('T')[0];}
+function todayDay(){const d=new Date().getDay();return d===0?null:DAYS[d-1];}
+function dayFromDate(ds){const d=new Date(ds).getDay();return d===0?null:DAYS[d-1];}
+function fmtDate(ds){return new Date(ds).toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});}
+function fmtTime(t){if(!t)return'';const[h,m]=t.split(':');const hh=+h;return(hh>12?hh-12:hh)+':'+(m||'00')+' '+(hh>=12?'PM':'AM');}
+function timings(){return(S.config.timings||DEFAULT_TIMINGS)[S.config.season||'summer']||[];}
+function isToday(ds){return ds===today();}
+
+// Class display name: "Class 6 — ARCTIC"
+function clsDisplay(cls){
+  if(!cls)return'';
+  if(cls.classNum&&cls.section) return `Class ${cls.classNum} — ${cls.section}`;
+  if(cls.classNum) return `Class ${cls.classNum} — ${cls.cls}`;
+  return cls.cls||'';
+}
+
+const AVC=['#1a4d8f','#1e6b3c','#7a3200','#5a1d8a','#006064','#7a4800','#7a0f3a','#003d6a','#4a3010','#005040','#0a3d8a','#6b0f4a'];
+function avColor(n){let h=0;for(let c of(n||'X'))h=(h*31+c.charCodeAt(0))&0xffff;return AVC[h%AVC.length];}
+function avInit(n){return(n||'?').replace(/^(Ms\.|Mr\.)\s*/,'').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();}
+
+function subjClass(s){
+  if(!s)return'empty';const l=s.toLowerCase();
+  if(l.includes('assembly')||l.includes('yoga'))return'asm';
+  if(l.includes('english'))return'eng';if(l.includes('math'))return'math';
+  if(l.includes('hindi'))return'hindi';if(l.includes('punjabi'))return'punjabi';
+  if(l.includes('evs'))return'evs';if(l.includes('sci'))return'sci';
+  if(l.includes('s.s.t'))return'sst';if(l.includes('ict')||l.includes('icr'))return'ict';
+  if(l.includes('robot'))return'rob';if(l.includes('art'))return'art';
+  if(l.includes('music'))return'music';if(l.includes('dance'))return'dance';
+  if(l.includes('swim')||l.includes('sport')||l.includes('skat'))return'pe';
+  if(l.includes('lib'))return'lib';if(l.includes('l.r'))return'lr';if(l.includes('skill'))return'csk';
+  return'empty';
+}
+
+function getClsLevel(clsName){
+  const c=S.classes.find(x=>x.cls===clsName);
+  return c?.level||1;
+}
+
+function showGlobal(msg,t='ok'){
+  const a=document.getElementById('gAlerts');
+  a.innerHTML=`<div class="alert al-${t}">${msg}</div>`;
+  setTimeout(()=>a.innerHTML='',4500);
+}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+// ── INIT UI ──
+function initUI(){
+  updateClock();updateTopBar();populateAllSelects();
+  refreshAll();
+  document.getElementById('lvDate').value=today();
+  document.getElementById('waDate').value=today();
+  const vl=window.location.href.replace('index.html','view.html');
+  document.getElementById('setViewLink').value=vl;
+  setInterval(updateClock,1000);
+  setInterval(()=>{if(document.getElementById('sec-morning').classList.contains('active'))renderMorning();},60000);
+  onFirstLoad();
+}
+
+function refreshAll(){
+  updateTopBar();populateAllSelects();
+  renderMorning();renderTT();renderTeachers();renderLeaveTable();
+  renderTimingEditor();renderSubjList();renderSettings();
+}
+
+function updateTopBar(){
+  document.getElementById('topName').textContent=S.config.school||'NWW Ravenwood';
+  document.getElementById('topYear').textContent='Smart Timetable — '+(S.config.year||'2025-26');
+  const sp=document.getElementById('seasonPill');
+  sp.textContent=S.config.season==='summer'?'☀️ Summer':'❄️ Winter';
+  sp.className='season-pill '+(S.config.season==='summer'?'season-summer':'season-winter');
+  document.getElementById('loginTitle').textContent=S.config.school||'NWW Ravenwood International School';
+}
+
+function updateClock(){
+  const now=new Date();
+  if(document.getElementById('clock'))
+    document.getElementById('clock').textContent=now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})+' '+now.toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short'});
+}
+
+// ── POPULATE SELECTS ──
+function populateAllSelects(){
+  // class selects
+  ['ttCls','ncCT'].forEach(id=>{
+    const s=document.getElementById(id);if(!s)return;
+    const v=s.value;s.innerHTML='';
+    if(id==='ncCT')s.innerHTML='<option value="">(No CT yet)</option>';
+    S.classes.forEach(c=>{
+      const o=document.createElement('option');
+      o.value=c.cls;
+      o.textContent=clsDisplay(c)+(c.ct?' — '+c.ct:'');
+      s.appendChild(o);
+    });
+    if(v)s.value=v;
+  });
+  // teacher selects
+  ['tmCT','lvTeacher','epTeacher'].forEach(id=>{
+    const s=document.getElementById(id);if(!s)return;
+    const v=s.value;s.innerHTML='';
+    if(id==='tmCT')s.innerHTML='<option value="">None</option>';
+    if(id==='lvTeacher')s.innerHTML='<option value="">-- Select Teacher --</option>';
+    if(id==='epTeacher')s.innerHTML='<option value="">-- Select --</option>';
+    S.teachers.forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=t.name;s.appendChild(o);});
+    if(v)s.value=v;
+  });
+  // subject selects
+  ['tmSubjSel','epSubj'].forEach(id=>{
+    const s=document.getElementById(id);if(!s)return;
+    const v=s.value;s.innerHTML='';
+    if(id==='epSubj')s.innerHTML='<option value="">-- Free / Empty --</option>';
+    S.subjects.forEach(subj=>{const o=document.createElement('option');o.value=subj;o.textContent=subj;s.appendChild(o);});
+    if(v)s.value=v;
+  });
+}
+
+// ── MORNING SUMMARY ──
+function renderMorning(){
+  const day=todayDay();
+  const now=new Date();
+  document.getElementById('mornTitle').textContent='📋 Morning Summary — '+(day||'Sunday');
+  document.getElementById('mornDate').textContent=now.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const T=timings();
+  const nowMin=now.getHours()*60+now.getMinutes();
+  let curP=-1;
+  T.forEach((t,i)=>{
+    if(!t.start||!t.end)return;
+    const[sh,sm]=t.start.split(':').map(Number);
+    const[eh,em]=t.end.split(':').map(Number);
+    if(nowMin>=sh*60+sm&&nowMin<eh*60+em)curP=i;
+  });
+  const todayLeaves=S.leaveRecords.filter(r=>r.date===today()&&r.approved);
+  const pending=S.leaveRecords.filter(r=>r.date===today()&&!r.approved);
+  let html='';
+  if(!day)html='<div class="alert al-ok">Today is Sunday — School closed.</div>';
+  else if(curP>=0)html=`<div class="alert al-info">⏰ Current: <b>Period ${PERIODS[curP]}</b> (${fmtTime(T[curP]?.start)} – ${fmtTime(T[curP]?.end)})</div>`;
+  else html=`<div class="alert al-ok">✅ No active period right now.</div>`;
+  if(todayLeaves.length===0&&pending.length===0)
+    html+='<div class="alert al-ok" style="margin-top:8px">✅ All teachers present today.</div>';
+  else if(todayLeaves.length>0){
+    const ab=[...new Set(todayLeaves.map(r=>r.teacher))];
+    html+=`<div class="alert al-warn" style="margin-top:8px">⚠️ ${ab.length} teacher(s) absent: <b>${ab.join(', ')}</b></div>`;
+  }
+  document.getElementById('mornContent').innerHTML=html;
+
+  // Pending
+  const pp2=document.getElementById('pendingPanel');
+  if(pending.length>0){
+    pp2.style.display='block';
+    const grouped={};
+    pending.forEach(r=>{if(!grouped[r.teacher])grouped[r.teacher]=[];grouped[r.teacher].push(r);});
+    let ph='';
+    Object.entries(grouped).forEach(([tname,recs])=>{
+      const cls=S.classes.find(c=>c.ct===tname);
+      ph+=`<div style="display:flex;align-items:flex-start;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bdr);flex-wrap:wrap;gap:8px">
+        <div>
+          <p style="font-size:13px;font-weight:700">🚫 ${tname} — ${recs[0].reason} <span style="font-size:11px;color:var(--tx2)">(${recs[0].leaveType||'Full Day'})</span></p>
+          <p style="font-size:12px;color:var(--tx2);margin-top:3px">${clsDisplay(cls)||recs[0].cls} | ${recs.length} period(s) → ${recs.map(r=>`P${PERIODS[r.period]}:${r.sub||'TBD'}`).join(', ')}</p>
+        </div>
+        <div style="display:flex;gap:7px">
+          <button class="btn btn-green btn-sm" onclick="approveLeave('${recs[0].teacherId}','${recs[0].date}')">✅ Approve</button>
+          <button class="btn btn-red btn-sm" onclick="rejectLeave('${recs[0].teacherId}','${recs[0].date}')">✗ Reject</button>
+        </div>
+      </div>`;
+    });
+    document.getElementById('pendingList').innerHTML=ph;
+  }else pp2.style.display='none';
+
+  // Approved
+  const ap=document.getElementById('approvedList');
+  if(todayLeaves.length>0){
+    let ah='<table class="sub-table"><thead><tr><th>Absent Teacher</th><th>Class</th><th>Period</th><th>Time</th><th>Subject</th><th>Type</th><th>Substitute</th></tr></thead><tbody>';
+    todayLeaves.forEach(r=>{
+      const cls=S.classes.find(c=>c.ct===r.teacher);
+      ah+=`<tr><td><b>${r.teacher}</b></td><td>${clsDisplay(cls)||r.cls}</td><td>${PERIODS[r.period]}</td><td>${fmtTime(T[r.period]?.start)}</td><td>${r.subj}</td><td><span style="font-size:11px;color:var(--or)">${r.leaveType||'Full Day'}</span></td><td style="color:var(--gn);font-weight:600">${r.sub||'TBD'}</td></tr>`;
+    });
+    ah+='</tbody></table>';
+    ap.innerHTML=ah;
+  }else ap.innerHTML='<p style="font-size:13px;color:var(--tx3)">No substitutes today.</p>';
+}
+
+async function approveLeave(tid,date){
+  S.leaveRecords.forEach(r=>{if(r.teacherId===tid&&r.date===date)r.approved=true;});
+  await fbSet('leaveRecords',Object.fromEntries(S.leaveRecords.map((r,i)=>[r.id||'lr'+i,r])));
+  renderMorning();renderTT();renderLeaveTable();showGlobal('Approved!','ok');
+}
+async function rejectLeave(tid,date){
+  S.leaveRecords=S.leaveRecords.filter(r=>!(r.teacherId===tid&&r.date===date));
+  await fbSet('leaveRecords',Object.fromEntries(S.leaveRecords.map((r,i)=>[r.id||'lr'+i,r])));
+  renderMorning();renderLeaveTable();showGlobal('Rejected.','ok');
+}
+
+// ── TIMETABLE ──
+function renderTT(){
+  const clsName=document.getElementById('ttCls').value;
+  const dayF=document.getElementById('ttDay').value;
+  const cls=S.classes.find(c=>c.cls===clsName);
+  if(!cls){document.getElementById('ttGrid').innerHTML='<p style="padding:18px;color:var(--tx3)">No class selected.</p>';return;}
+  const td=todayDay();
+  const display=clsDisplay(cls);
+  document.getElementById('ttInfo').innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:36px;height:36px;border-radius:50%;background:${avColor(cls.ct||'X')};display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700">${avInit(cls.ct||'?')}</div>
+        <div>
+          <div style="font-size:14px;font-weight:700">${display}</div>
+          <div style="font-size:12px;color:var(--tx2)">CT: <b>${cls.ct||'(Vacant)'}</b> &nbsp;|&nbsp; <b>${LEVEL_NAMES[cls.level||1]||'Level '+cls.level}</b></div>
+        </div>
+      </div>
+      <span style="font-size:11px;padding:3px 9px;border-radius:10px;background:var(--blbg);color:var(--bl);font-weight:600">Click any cell to edit</span>
+    </div>`;
+  const days=dayF?[dayF]:DAYS;
+  const T=timings();
+  let h='<table class="tt"><thead><tr><th class="left">Day</th>';
+  PERIODS.forEach((p,i)=>{h+=`<th>${p}<br><span style="font-size:9px;font-weight:400;color:var(--tx3)">${fmtTime(T[i]?.start)}</span></th>`;});
+  h+='</tr></thead><tbody>';
+  days.forEach(day=>{
+    const isT=day===td;
+    h+=`<tr><td class="day-td${isT?' today':''}">${isT?'<b>'+day+' ★</b>':day}</td>`;
+    for(let i=0;i<8;i++){
+      const cell=(cls.schedule&&cls.schedule[day]&&cls.schedule[day][i])||{subj:'',type:'ct',teacher:''};
+      const subj=typeof cell==='string'?cell:(cell.subj||'');
+      const cellType=typeof cell==='string'?'ct':(cell.type||'ct');
+      const cellTeacherId=typeof cell==='string'?'':(cell.teacher||'');
+      const lr=S.leaveRecords.find(r=>r.cls===cls.cls&&r.day===day&&r.period===i&&isToday(r.date)&&r.approved);
+      const sc=lr?'sub-period':subjClass(subj);
+      // Resolve teacher name
+      let teacherName='';
+      if(cellType==='ct') teacherName=cls.ct||'';
+      else{
+        const specT=S.teachers.find(t=>t.id===cellTeacherId||t.name===cellTeacherId);
+        if(specT){
+          const specLabel=specT.specialist&&specT.specialist!=='0'?specT.specialist.charAt(0).toUpperCase()+specT.specialist.slice(1):'Specialist';
+          teacherName=specT.name+' ('+specLabel+')';
+        }else if(cellTeacherId) teacherName=cellTeacherId+(cellType==='visiting'?' (Visiting)':' (Specialist)');
+        else teacherName=cellType==='specialist'?'Specialist Teacher':'Visiting CT';
+      }
+      const typeLabel=cellType==='specialist'?'Specialist':cellType==='visiting'?'Visiting':'CT';
+      const typeColor=cellType==='specialist'?'var(--or)':cellType==='visiting'?'var(--gn)':'var(--bl)';
+      h+=`<td onclick="openEditPeriod('${cls.cls}','${day}',${i})">
+        <div class="pb ${sc}">
+          <div class="s">${subj||'<span style="color:var(--tx3);font-size:10px">—</span>'}</div>
+          <div class="t">${teacherName}</div>
+          <span class="tbadge" style="background:${typeColor}22;color:${typeColor}">${typeLabel}</span>
+          ${lr?`<span class="subbadge">Sub: ${lr.sub}</span>`:''}
+        </div></td>`;
+    }
+    h+='</tr>';
+  });
+  h+='</tbody></table>';
+  document.getElementById('ttGrid').innerHTML=h;
+}
+
+function openEditPeriod(clsName,day,pi){
+  editingCell={cls:clsName,day,period:pi};
+  const cls=S.classes.find(c=>c.cls===clsName);
+  const cell=(cls?.schedule?.[day]||[])[pi]||{subj:'',type:'ct',teacher:''};
+  const subj=typeof cell==='string'?cell:(cell.subj||'');
+  const cellType=typeof cell==='string'?'ct':(cell.type||'ct');
+  const cellTeacher=typeof cell==='string'?'':(cell.teacher||'');
+  const T=timings();
+  document.getElementById('epTitle').textContent=`Edit: ${clsDisplay(cls)||clsName} / ${day} / Period ${PERIODS[pi]} (${fmtTime(T[pi]?.start)})`;
+  populateAllSelects();
+  document.getElementById('epSubj').value=subj;
+  document.getElementById('epType').value=cellType;
+  document.getElementById('epTeacher').value=cellTeacher;
+  document.getElementById('epTeacherFg').style.display=cellType==='ct'?'none':'block';
+  document.getElementById('conflictBox').style.display='none';
+  openModal('editPeriodModal');
+}
+
+function checkConflict(){
+  const type=document.getElementById('epType').value;
+  document.getElementById('epTeacherFg').style.display=type==='ct'?'none':'block';
+  if(!editingCell)return;
+  const{cls,day,period}=editingCell;
+  const subj=document.getElementById('epSubj').value;
+  const teacherId=document.getElementById('epTeacher').value;
+  const conflictBox=document.getElementById('conflictBox');
+  if(!subj||type==='ct'||!teacherId){conflictBox.style.display='none';return;}
+  const teacher=S.teachers.find(t=>t.id===teacherId);
+  if(!teacher){conflictBox.style.display='none';return;}
+  const clsObj=S.classes.find(c=>c.cls===cls);
+  const clsLevel=clsObj?.level||1;
+  let conflicts=[];
+  // Check busy
+  S.classes.forEach(c=>{
+    if(c.cls===cls)return;
+    const cell=(c.schedule?.[day]||[])[period];
+    const ct=typeof cell==='string'?'ct':(cell?.type||'ct');
+    const cT=typeof cell==='string'?'':(cell?.teacher||'');
+    if(ct==='ct'&&c.ct===teacher.name)conflicts.push(`Already teaching <b>${clsDisplay(c)}</b> at this time`);
+    if(cT===teacher.id||cT===teacher.name)conflicts.push(`Already assigned to <b>${clsDisplay(c)}</b> at this time`);
+  });
+  // Level check
+  if(clsLevel<(teacher.minLevel||1)||clsLevel>(teacher.maxLevel||12))
+    conflicts.push(`${teacher.name} handles ${LEVEL_NAMES[teacher.minLevel||1]} to ${LEVEL_NAMES[teacher.maxLevel||12]} only`);
+  if(conflicts.length>0){
+    document.getElementById('conflictMsg').innerHTML=conflicts.join('<br>');
+    const free=findFreeTeachers(day,period,null,subj,clsLevel);
+    const sb=document.getElementById('suggestBox');
+    if(free.length>0){
+      sb.style.display='block';
+      document.getElementById('suggestList').innerHTML=free.slice(0,4).map(t=>`<button class="btn btn-sm btn-green" style="margin:3px" onclick="document.getElementById('epTeacher').value='${t.id}';document.getElementById('conflictBox').style.display='none'">${t.name}</button>`).join('');
+    }else sb.style.display='none';
+    conflictBox.style.display='block';
+  }else conflictBox.style.display='none';
+}
+
+async function saveEP(){
+  const{cls,day,period}=editingCell;
+  const subj=document.getElementById('epSubj').value;
+  const type=document.getElementById('epType').value;
+  const teacher=document.getElementById('epTeacher').value;
+  const c=S.classes.find(x=>x.cls===cls);
+  if(c){
+    if(!c.schedule)c.schedule={};
+    if(!c.schedule[day])c.schedule[day]=Array(8).fill({subj:'',type:'ct',teacher:''});
+    c.schedule[day][period]={subj,type,teacher};
+    const fi=S.classes.findIndex(x=>x.cls===cls);
+    await fbSet('classes/c'+fi+'/schedule/'+day+'/'+period,{subj,type,teacher});
+  }
+  renderTT();closeModal('editPeriodModal');showGlobal('Period updated!','ok');
+}
+
+async function clearEP(){
+  const{cls,day,period}=editingCell;
+  const c=S.classes.find(x=>x.cls===cls);
+  if(c&&c.schedule&&c.schedule[day]){
+    c.schedule[day][period]={subj:'',type:'ct',teacher:''};
+    const fi=S.classes.findIndex(x=>x.cls===cls);
+    await fbSet('classes/c'+fi+'/schedule/'+day+'/'+period,{subj:'',type:'ct',teacher:''});
+  }
+  renderTT();closeModal('editPeriodModal');
+}
+
+function openAddClass(){
+  document.getElementById('ncSection').value='';
+  document.getElementById('ncNum').value='6';
+  document.getElementById('ncLevel').value='6';
+  populateAllSelects();
+  openModal('addClassModal');
+  updateNcPreview();
+}
+
+function updateNcPreview(){
+  const num=document.getElementById('ncNum').value;
+  const sec=document.getElementById('ncSection').value||'A';
+  document.getElementById('ncPreview').textContent=`Class ${num} — ${sec}`;
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const nn=document.getElementById('ncNum');
+  const ns=document.getElementById('ncSection');
+  if(nn)nn.oninput=updateNcPreview;
+  if(ns)ns.oninput=updateNcPreview;
+});
+
+async function saveNewClass(){
+  const num=document.getElementById('ncNum').value;
+  const section=document.getElementById('ncSection').value.trim().toUpperCase();
+  const level=parseInt(document.getElementById('ncLevel').value)||1;
+  if(!section){alert('Enter section name.');return;}
+  const cls=`${num}-${section}`; // internal key e.g. "6-ARCTIC"
+  if(S.classes.find(c=>c.cls===cls)){alert('This class/section already exists.');return;}
+  const ctId=document.getElementById('ncCT').value;
+  const ct=S.teachers.find(t=>t.id===ctId)?.name||'(Vacant)';
+  const sched={};DAYS.forEach(d=>sched[d]=Array(8).fill({subj:'',type:'ct',teacher:''}));
+  const obj={cls,classNum:num,section,level,ct,schedule:sched};
+  S.classes.push(obj);
+  await fbPush('classes',obj);
+  populateAllSelects();document.getElementById('ttCls').value=cls;renderTT();closeModal('addClassModal');
+  showGlobal(`${clsDisplay(obj)} added!`,'ok');
+}
+
+async function delClass(){
+  const clsName=document.getElementById('ttCls').value;
+  if(!clsName)return;
+  const cls=S.classes.find(c=>c.cls===clsName);
+  if(!confirm(`Delete ${clsDisplay(cls)||clsName}? Cannot be undone.`))return;
+  const fi=S.classes.findIndex(c=>c.cls===clsName);
+  S.classes=S.classes.filter(c=>c.cls!==clsName);
+  await fbDel('classes/c'+fi);
+  populateAllSelects();renderTT();showGlobal('Class deleted.','ok');
+}
+
+// ── TEACHERS ──
+function renderTeachers(){
+  const q=(document.getElementById('tSearch').value||'').toLowerCase();
+  const filtered=S.teachers.filter(t=>(t.name||'').toLowerCase().includes(q));
+  let h='';
+  filtered.forEach(t=>{
+    const onLeave=S.leaveRecords.some(r=>r.teacherId===t.id&&isToday(r.date)&&r.approved);
+    const cls=S.classes.find(c=>c.cls===t.cls||c.ct===t.name);
+    const specLabel=t.specialist&&t.specialist!=='0'?' · '+t.specialist.toUpperCase():'';
+    const lvlLabel=`${LEVEL_NAMES[t.minLevel||1]||'KG'} → ${LEVEL_NAMES[t.maxLevel||12]||'Class 12'}`;
+    h+=`<div class="card${onLeave?' leave-active':''}">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px">
+        <div class="avatar" style="background:${avColor(t.name)}">${avInit(t.name)}</div>
+        <div style="flex:1;min-width:0">
+          <h4 style="font-size:13px;font-weight:700">${t.name}</h4>
+          <div style="font-size:11px;color:var(--tx2)">${t.role||'Teacher'}${specLabel}</div>
+          ${cls?`<div style="font-size:11px;color:var(--tx2)">CT: <b>${clsDisplay(cls)}</b></div>`:''}
+          <div style="font-size:11px;color:var(--bl)">${lvlLabel}</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:7px">
+        ${(t.subjects||[]).slice(0,3).map(s=>`<span style="font-size:10px;padding:2px 6px;border-radius:9px;background:var(--blbg);color:var(--bl);font-weight:500">${s}</span>`).join('')}
+        ${(t.subjects||[]).length>3?`<span style="font-size:10px;color:var(--tx3)">+${(t.subjects||[]).length-3}</span>`:''}
+      </div>
+      <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;background:${onLeave?'var(--rdbg)':'var(--gnbg)'};color:${onLeave?'var(--rd)':'var(--gn)'}">${onLeave?'On Leave':'Present'}</span>
+      <div style="margin-top:9px"><button class="btn btn-sm" onclick="editTeacher('${t.id}')">Edit</button></div>
+    </div>`;
+  });
+  h+=`<div class="card add-new" onclick="openAddTeacher()"><div style="font-size:26px">+</div><div style="font-size:12px;font-weight:600">Add Teacher</div></div>`;
+  document.getElementById('teacherCards').innerHTML=h;
+}
+
+function openAddTeacher(){
+  editingTeacher=null;editingSubjs=[];
+  document.getElementById('tmTitle').textContent='Add Teacher';
+  ['tmName','tmPhone','tmRole'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('tmSpecialist').value='0';
+  document.getElementById('tmMinLevel').value=1;document.getElementById('tmMaxLevel').value=5;
+  document.getElementById('tmDelBtn').style.display='none';
+  populateAllSelects();document.getElementById('tmSubjList').innerHTML='';
+  updateLevelGrid();openModal('teacherModal');
+}
+
+function editTeacher(id){
+  const t=S.teachers.find(x=>x.id===id);if(!t)return;
+  editingTeacher=id;editingSubjs=[...(t.subjects||[])];
+  document.getElementById('tmTitle').textContent='Edit Teacher';
+  document.getElementById('tmName').value=t.name;document.getElementById('tmPhone').value=t.phone||'';
+  document.getElementById('tmRole').value=t.role||'';document.getElementById('tmSpecialist').value=t.specialist||'0';
+  document.getElementById('tmMinLevel').value=t.minLevel||1;document.getElementById('tmMaxLevel').value=t.maxLevel||5;
+  document.getElementById('tmDelBtn').style.display='inline-block';
+  populateAllSelects();
+  // Set CT
+  const cls=S.classes.find(c=>c.ct===t.name);
+  if(cls)document.getElementById('tmCT').value=cls.cls;
+  renderSubjPills();updateLevelGrid();openModal('teacherModal');
+}
+
+function addTSubj(){const s=document.getElementById('tmSubjSel').value;if(!s||editingSubjs.includes(s))return;editingSubjs.push(s);renderSubjPills();}
+function removeTSubj(s){editingSubjs=editingSubjs.filter(x=>x!==s);renderSubjPills();}
+function renderSubjPills(){document.getElementById('tmSubjList').innerHTML=editingSubjs.map(s=>`<span class="pill">${s}<span class="x" onclick="removeTSubj('${s.replace(/'/g,"\\'")}')">×</span></span>`).join('');}
+
+function updateLevelGrid(){
+  const min=parseInt(document.getElementById('tmMinLevel').value)||1;
+  const max=parseInt(document.getElementById('tmMaxLevel').value)||5;
+  let h='';
+  for(let i=1;i<=12;i++){
+    const sel=i>=min&&i<=max;
+    h+=`<button type="button" class="level-btn${sel?' selected':''}" onclick="toggleLevel(${i})">${LEVEL_NAMES[i]||'L'+i}</button>`;
+  }
+  document.getElementById('levelGrid').innerHTML=h;
+}
+
+function toggleLevel(i){
+  const mn=document.getElementById('tmMinLevel');
+  const mx=document.getElementById('tmMaxLevel');
+  const min=parseInt(mn.value)||1;const max=parseInt(mx.value)||5;
+  if(i<min)mn.value=i;else if(i>max)mx.value=i;
+  else if(i===min&&min<max)mn.value=i+1;else if(i===max&&max>min)mx.value=i-1;
+  updateLevelGrid();
+}
+
+async function saveTeacher(){
+  const name=document.getElementById('tmName').value.trim();
+  if(!name){alert('Enter teacher name.');return;}
+  const phone=document.getElementById('tmPhone').value.trim();
+  const role=document.getElementById('tmRole').value.trim();
+  const specialist=document.getElementById('tmSpecialist').value;
+  const minLevel=parseInt(document.getElementById('tmMinLevel').value)||1;
+  const maxLevel=parseInt(document.getElementById('tmMaxLevel').value)||5;
+  const ctCls=document.getElementById('tmCT').value;
+  if(editingTeacher){
+    const t=S.teachers.find(x=>x.id===editingTeacher);
+    if(t){Object.assign(t,{name,phone,role,specialist,minLevel,maxLevel,subjects:[...editingSubjs],cls:ctCls});
+      if(ctCls){const cls=S.classes.find(c=>c.cls===ctCls);if(cls)cls.ct=name;}
+      await fbSet('teachers/'+editingTeacher,t);}
+  }else{
+    const id='t'+Date.now();
+    const obj={id,name,phone,role,specialist,minLevel,maxLevel,subjects:[...editingSubjs],cls:ctCls};
+    S.teachers.push(obj);
+    if(ctCls){const cls=S.classes.find(c=>c.cls===ctCls);if(cls)cls.ct=name;}
+    await fbSet('teachers/'+id,obj);
+  }
+  renderTeachers();populateAllSelects();closeModal('teacherModal');showGlobal('Teacher saved!','ok');
+}
+
+async function delTeacher(){
+  if(!editingTeacher)return;
+  const t=S.teachers.find(x=>x.id===editingTeacher);
+  if(!confirm('Delete '+t.name+'?'))return;
+  S.teachers=S.teachers.filter(x=>x.id!==editingTeacher);
+  await fbDel('teachers/'+editingTeacher);
+  renderTeachers();populateAllSelects();closeModal('teacherModal');showGlobal('Deleted.','ok');
+}
+
+// ── SUBSTITUTE FINDER ──
+function findFreeTeachers(day,periodIdx,excludeId,subj,clsLevel){
+  return S.teachers.filter(t=>{
+    if(excludeId&&t.id===excludeId)return false;
+    if(t.specialist&&t.specialist!=='0')return false;
+    if(S.leaveRecords.some(r=>r.teacherId===t.id&&r.date===today()&&r.approved))return false;
+    const busy=S.classes.some(c=>{
+      const cell=(c.schedule?.[day]||[])[periodIdx];
+      const ct=typeof cell==='string'?'ct':(cell?.type||'ct');
+      const cT=typeof cell==='string'?'':(cell?.teacher||'');
+      if(ct==='ct'&&c.ct===t.name)return true;
+      if(cT===t.id||cT===t.name)return true;
+      return false;
+    });
+    if(busy)return false;
+    if(clsLevel<(t.minLevel||1)||clsLevel>(t.maxLevel||12))return false;
+    return true;
+  }).sort((a,b)=>{
+    const aM=(a.subjects||[]).some(s=>s.toLowerCase().includes((subj||'').toLowerCase().split(' ')[0]));
+    const bM=(b.subjects||[]).some(s=>s.toLowerCase().includes((subj||'').toLowerCase().split(' ')[0]));
+    return (bM?1:0)-(aM?1:0);
+  });
+}
+
+// Periods affected based on leave type
+function affectedPeriods(lvType){
+  if(lvType==='full')return[0,1,2,3,4,5,6,7];
+  if(lvType==='half_am')return[0,1,2,3]; // morning: I-IV
+  if(lvType==='half_pm')return[4,5,6,7]; // afternoon: V-VIII
+  if(lvType==='custom')return[...selectedCustomPeriods];
+  return[0,1,2,3,4,5,6,7];
+}
+
+// ── LEAVE & SUBS ──
+function buildLeavePreview(){
+  const tid=document.getElementById('lvTeacher').value;
+  const date=document.getElementById('lvDate').value;
+  const lvType=document.getElementById('lvType').value;
+  // Show/hide custom periods
+  const cpBox=document.getElementById('customPeriodsBox');
+  if(lvType==='custom'){
+    cpBox.style.display='block';
+    renderCustomPeriodBtns();
+  }else cpBox.style.display='none';
+
+  if(!tid||!date){document.getElementById('leavePreview').innerHTML='<p style="font-size:13px;color:var(--tx3)">Select teacher and date.</p>';return;}
+  const teacher=S.teachers.find(t=>t.id===tid);if(!teacher)return;
+  const day=dayFromDate(date);
+  if(!day){document.getElementById('leavePreview').innerHTML='<p style="color:var(--or);font-size:13px">Sunday — no school.</p>';return;}
+  const cls=S.classes.find(c=>c.ct===teacher.name);
+  if(!cls){document.getElementById('leavePreview').innerHTML=`<div class="alert al-warn">No class timetable for ${teacher.name}.</div>`;return;}
+  const clsLevel=cls.level||1;
+  const T=timings();
+  const affected=affectedPeriods(lvType);
+
+  let h=`<div class="alert al-info" style="margin-bottom:10px">
+    <b>${teacher.name}</b> — ${clsDisplay(cls)} — ${fmtDate(date)}<br>
+    <span style="font-size:11.5px">Leave type: <b>${lvType==='full'?'Full Day':lvType==='half_am'?'Half Day Morning':lvType==='half_pm'?'Half Day Afternoon':'Custom Periods'}</b></span>
+  </div>`;
+
+  const periods=cls.schedule?.[day]||[];
+  let hasRows=false;
+
+  periods.forEach((cell,idx)=>{
+    const subj=typeof cell==='string'?cell:(cell?.subj||'');
+    const cellType=typeof cell==='string'?'ct':(cell?.type||'ct');
+    if(!subj||subj.toLowerCase().includes('assembly'))return;
+    if(cellType==='specialist')return;
+    if(!affected.includes(idx))return;
+    hasRows=true;
+    const free=findFreeTeachers(day,idx,tid,subj,clsLevel);
+    // Any free teacher (ignoring level for manual override)
+    const anyFree=S.teachers.filter(t=>{
+      if(t.id===tid)return false;
+      if(t.specialist&&t.specialist!=='0')return false;
+      const busy=S.classes.some(c=>{
+        const c2=(c.schedule?.[day]||[])[idx];
+        const ct=typeof c2==='string'?'ct':(c2?.type||'ct');
+        const cT=typeof c2==='string'?'':(c2?.teacher||'');
+        if(ct==='ct'&&c.ct===t.name)return true;
+        if(cT===t.id||cT===t.name)return true;
+        return false;
+      });
+      return !busy;
+    });
+    const best=free[0];
+    const overrideKey=`${tid}_${date}_${idx}`;
+    const manualSub=manualOverrides[overrideKey];
+    const displaySub=manualSub||best?.name||null;
+    const isMatch=best&&(best.subjects||[]).some(s=>s.toLowerCase().includes(subj.toLowerCase().split(' ')[0]));
+    const noEligible=!best;
+
+    h+=`<div style="background:${noEligible?'var(--rdbg)':'var(--sur)'};border:1px solid ${noEligible?'#f5c0c0':'var(--bdr)'};border-radius:8px;padding:10px 12px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:${anyFree.length||noEligible?8:0}px">
+        <div>
+          <b>Period ${PERIODS[idx]}</b>
+          <span style="font-size:11px;color:var(--tx3);margin-left:6px">${fmtTime(T[idx]?.start)}</span>
+          <span style="font-size:11.5px;padding:2px 7px;border-radius:6px;background:var(--blbg);color:var(--bl);font-weight:600;margin-left:8px">${subj}</span>
+        </div>
+        <div>
+          ${displaySub?`<span style="font-size:13px;font-weight:700;color:var(--gn)">✅ ${displaySub}</span> <span style="font-size:10.5px;color:${isMatch&&!manualSub?'var(--gn)':'var(--bl)'}">${manualSub?'Manual':isMatch?'Same subject':'Free CT'}</span>`
+          :`<span style="font-size:12.5px;font-weight:700;color:var(--rd)">❌ No eligible teacher</span>`}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="manSel_${overrideKey}" style="flex:1;min-width:160px;padding:6px 10px;border:1px solid ${noEligible?'#f5c0c0':'var(--bdr)'};border-radius:6px;font-size:12.5px;background:var(--sur);color:var(--tx)">
+          <option value="">${noEligible?'⚠️ Assign manually':'🔄 Override substitute'}</option>
+          ${anyFree.map(t=>{
+            const sm=(t.subjects||[]).some(s=>s.toLowerCase().includes(subj.toLowerCase().split(' ')[0]));
+            const lm=(t.minLevel||1)<=(clsLevel)&&(t.maxLevel||12)>=(clsLevel);
+            return`<option value="${t.name}" ${manualOverrides[overrideKey]===t.name?'selected':''}>${t.name} ${sm?'✅':lm?'📋':'⚠️'}</option>`;
+          }).join('')}
+        </select>
+        <button class="btn btn-blue btn-sm" onclick="applyOverride('${overrideKey}')">Assign</button>
+        ${manualSub?`<button class="btn btn-sm btn-red" onclick="clearOverride('${overrideKey}')">Clear</button>`:''}
+      </div>
+      ${anyFree.length===0?`<div class="alert al-warn" style="margin-top:7px;font-size:12px">All teachers busy — consider merging classes or Free Period.</div>`:''}
+    </div>`;
+  });
+
+  if(!hasRows)h+='<div class="alert al-ok">No CT periods in the selected leave window — specialist periods run normally.</div>';
+  document.getElementById('leavePreview').innerHTML=h;
+}
+
+function renderCustomPeriodBtns(){
+  const T=timings();
+  document.getElementById('customPeriodsBtns').innerHTML=PERIODS.map((p,i)=>`
+    <button type="button" onclick="toggleCustomPeriod(${i})" id="cpbtn_${i}"
+      style="padding:6px 12px;border:1px solid ${selectedCustomPeriods.has(i)?'var(--bl)':'var(--bdr)'};border-radius:6px;background:${selectedCustomPeriods.has(i)?'var(--blbg)':'var(--sur)'};color:${selectedCustomPeriods.has(i)?'var(--bl)':'var(--tx2)'};font-size:12px;font-weight:600;cursor:pointer">
+      ${p}<br><span style="font-size:9px;font-weight:400">${fmtTime(T[i]?.start)}</span>
+    </button>`).join('');
+}
+
+function toggleCustomPeriod(i){
+  if(selectedCustomPeriods.has(i))selectedCustomPeriods.delete(i);
+  else selectedCustomPeriods.add(i);
+  buildLeavePreview();
+}
+
+function applyOverride(key){
+  const sel=document.getElementById('manSel_'+key);
+  if(!sel||!sel.value){showGlobal('Select a teacher first.','warn');return;}
+  manualOverrides[key]=sel.value;
+  buildLeavePreview();showGlobal('Assigned: '+sel.value,'ok');
+}
+function clearOverride(key){delete manualOverrides[key];buildLeavePreview();}
+
+async function markLeave(){
+  const tid=document.getElementById('lvTeacher').value;
+  const date=document.getElementById('lvDate').value;
+  const reason=document.getElementById('lvReason').value;
+  const lvType=document.getElementById('lvType').value;
+  if(!tid||!date){showGlobal('Select teacher and date.','warn');return;}
+  const teacher=S.teachers.find(t=>t.id===tid);if(!teacher)return;
+  const day=dayFromDate(date);
+  if(!day){showGlobal('Sunday is a holiday.','warn');return;}
+  const cls=S.classes.find(c=>c.ct===teacher.name);
+  if(!cls){showGlobal(teacher.name+' has no class assigned.','warn');return;}
+  const clsLevel=cls.level||1;
+  const affected=affectedPeriods(lvType);
+  const periods=cls.schedule?.[day]||[];
+  let count=0;
+  for(let idx=0;idx<periods.length;idx++){
+    if(!affected.includes(idx))continue;
+    const cell=periods[idx];
+    const subj=typeof cell==='string'?cell:(cell?.subj||'');
+    const cellType=typeof cell==='string'?'ct':(cell?.type||'ct');
+    if(!subj||subj.toLowerCase().includes('assembly'))continue;
+    if(cellType==='specialist')continue;
+    const overrideKey=`${tid}_${date}_${idx}`;
+    const manualSub=manualOverrides[overrideKey];
+    const free=findFreeTeachers(day,idx,tid,subj,clsLevel);
+    const sub=manualSub||free[0]?.name||'To be assigned';
+    const rec={
+      id:'lr'+Date.now()+idx,
+      teacherId:teacher.id,teacher:teacher.name,
+      cls:cls.cls,day,date,period:idx,
+      subj,periodType:cellType,sub,reason,
+      leaveType:lvType==='full'?'Full Day':lvType==='half_am'?'Half Day Morning':lvType==='half_pm'?'Half Day Afternoon':'Custom',
+      approved:false,isManual:!!manualSub
+    };
+    S.leaveRecords.push(rec);count++;
+    await fbPush('leaveRecords',rec);
+  }
+  // Clear overrides
+  Object.keys(manualOverrides).forEach(k=>{if(k.startsWith(tid+'_'+date))delete manualOverrides[k];});
+  selectedCustomPeriods.clear();
+  renderLeaveTable();renderMorning();renderTeachers();
+  showGlobal(`Leave created for ${teacher.name}. ${count} periods. Go to Morning Summary to APPROVE.`,'ok');
+}
+
+function renderLeaveTable(){
+  const tbody=document.getElementById('leaveTbody');
+  if(!S.leaveRecords.length){tbody.innerHTML='<tr><td colspan="9" style="padding:18px;text-align:center;color:var(--tx3)">No leave records yet.</td></tr>';return;}
+  tbody.innerHTML=S.leaveRecords.slice().reverse().map(r=>`
+    <tr>
+      <td>${r.date}<br><span style="font-size:11px;color:var(--tx2)">${r.day}</span></td>
+      <td><b style="color:var(--rd)">${r.teacher}</b><br><span style="font-size:11px;color:var(--tx2)">${r.reason}</span></td>
+      <td>${(()=>{const cls=S.classes.find(c=>c.cls===r.cls);return clsDisplay(cls)||r.cls;})()}</td>
+      <td>${PERIODS[r.period]}</td>
+      <td><span style="font-size:11px;color:var(--or);font-weight:600">${r.leaveType||'Full Day'}</span></td>
+      <td><span style="font-size:11.5px;padding:2px 7px;border-radius:8px;background:var(--blbg);color:var(--bl);font-weight:600">${r.subj}</span></td>
+      <td><span style="font-weight:600;color:${r.sub==='To be assigned'?'var(--rd)':'var(--gn)'}">${r.sub}</span>${r.isManual?' <span style="font-size:10px;padding:1px 5px;border-radius:4px;background:var(--blbg);color:var(--bl)">Manual</span>':''}</td>
+      <td><span style="font-size:11px;padding:2px 7px;border-radius:4px;font-weight:600;background:${r.approved?'var(--gnbg)':'var(--orbg)'};color:${r.approved?'var(--gn)':'var(--or)'}">${r.approved?'Approved':'Pending'}</span></td>
+      <td><button class="btn btn-sm btn-red" onclick="removeLeave('${r.id}')">Remove</button></td>
+    </tr>`).join('');
+}
+
+async function removeLeave(id){
+  S.leaveRecords=S.leaveRecords.filter(r=>r.id!==id);
+  await fbSet('leaveRecords',Object.fromEntries(S.leaveRecords.map((r,i)=>[r.id||'lr'+i,r])));
+  renderLeaveTable();renderMorning();renderTT();showGlobal('Removed.','ok');
+}
+
+// ── WHATSAPP IMAGE ──
+function generateWAImage(){
+  const date=document.getElementById('waDate').value;
+  const title=document.getElementById('waTitle').value||'Substitute Arrangement';
+  const day=dayFromDate(date);
+  const leaves=S.leaveRecords.filter(r=>r.date===date&&r.approved);
+  const T=timings();
+  const school=S.config.school||'NWW Ravenwood International School';
+  const canvas=document.createElement('canvas');
+  const CW=[150,70,70,70,70,70,70,70,70];
+  const RH=46;
+  const totalW=CW.reduce((a,b)=>a+b,0)+20;
+  const activeClasses=S.classes.filter(c=>{
+    const periods=c.schedule?.[day]||[];
+    return periods.some(cell=>{const s=typeof cell==='string'?cell:(cell?.subj||'');return s&&!s.toLowerCase().includes('assembly');});
+  });
+  canvas.width=totalW;
+  canvas.height=(activeClasses.length+3)*RH+110;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);
+  // Header
+  ctx.fillStyle='#1a4d8f';ctx.fillRect(0,0,canvas.width,60);
+  ctx.fillStyle='#ffffff';ctx.font='bold 16px Arial';ctx.textAlign='center';
+  ctx.fillText(school,canvas.width/2,24);
+  ctx.font='13px Arial';ctx.fillText(title+' — '+(day||'')+'  '+date,canvas.width/2,46);
+  // Period header
+  let y=60;
+  ctx.fillStyle='#e8f0fb';ctx.fillRect(0,y,canvas.width,RH);
+  ctx.fillStyle='#1a4d8f';ctx.font='bold 11px Arial';ctx.textAlign='left';
+  ctx.fillText('Class / Section',10,y+16);ctx.fillText('(CT)',10,y+30);
+  let cx=CW[0]+10;
+  PERIODS.forEach((p,i)=>{
+    ctx.textAlign='center';ctx.font='bold 11px Arial';ctx.fillStyle='#1a4d8f';
+    ctx.fillText(p,cx+CW[i+1]/2-3,y+16);
+    ctx.font='9px Arial';ctx.fillStyle='#5a5650';
+    ctx.fillText(fmtTime(T[i]?.start),cx+CW[i+1]/2-3,y+30);
+    cx+=CW[i+1];
+  });
+  y+=RH;
+  // Class rows
+  activeClasses.forEach((cls,ri)=>{
+    const bg=ri%2===0?'#ffffff':'#f4f3ef';
+    ctx.fillStyle=bg;ctx.fillRect(0,y,canvas.width,RH);
+    ctx.strokeStyle='#e0dbd2';ctx.strokeRect(0,y,canvas.width,RH);
+    ctx.fillStyle='#18160f';ctx.font='bold 11px Arial';ctx.textAlign='left';
+    ctx.fillText(clsDisplay(cls),10,y+16);
+    ctx.font='10px Arial';ctx.fillStyle='#5a5650';
+    ctx.fillText(cls.ct||'',10,y+30);
+    let cx2=CW[0]+10;
+    for(let i=0;i<8;i++){
+      const cell=(cls.schedule?.[day]||[])[i];
+      const subj=typeof cell==='string'?cell:(cell?.subj||'');
+      const lr=leaves.find(r=>r.cls===cls.cls&&r.period===i);
+      if(lr){
+        ctx.fillStyle='#fff3cd';ctx.fillRect(cx2,y+3,CW[i+1]-6,RH-6);
+        ctx.fillStyle='#856404';ctx.font='bold 10px Arial';ctx.textAlign='center';
+        ctx.fillText(lr.subj.slice(0,9),cx2+CW[i+1]/2-3,y+16);
+        ctx.fillStyle='#1e6b3c';ctx.font='9px Arial';
+        ctx.fillText('→'+lr.sub.split(' ').slice(-1)[0],cx2+CW[i+1]/2-3,y+29);
+      }else if(subj){
+        ctx.fillStyle='#5a5650';ctx.font='11px Arial';ctx.textAlign='center';
+        ctx.fillText(subj.slice(0,9),cx2+CW[i+1]/2-3,y+24);
+      }else{
+        ctx.fillStyle='#bbb';ctx.font='10px Arial';ctx.textAlign='center';
+        ctx.fillText('—',cx2+CW[i+1]/2-3,y+24);
+      }
+      cx2+=CW[i+1];
+    }
+    y+=RH;
+  });
+  // Legend
+  y+=8;
+  ctx.fillStyle='#fff3cd';ctx.fillRect(10,y,18,14);
+  ctx.fillStyle='#856404';ctx.font='11px Arial';ctx.textAlign='left';
+  ctx.fillText('= Substitute assigned',34,y+11);
+  ctx.fillStyle='#9c9890';ctx.font='10px Arial';
+  ctx.fillText('Generated by NWW Ravenwood Smart Timetable System — '+new Date().toLocaleString('en-IN'),10,y+30);
+  // Show preview
+  canvas.style.cssText='max-width:100%;border:1px solid var(--bdr);border-radius:var(--r)';
+  const wrap=document.getElementById('waPreviewWrap');
+  wrap.innerHTML='';wrap.style.justifyContent='flex-start';wrap.style.alignItems='flex-start';
+  wrap.appendChild(canvas);
+  window._waCanvas=canvas;
+  document.getElementById('waDownBtn').style.display='block';
+  showGlobal('Image generated! Download and send in WhatsApp.','ok');
+}
+
+function downloadWAImage(){
+  if(!window._waCanvas){showGlobal('Generate image first.','warn');return;}
+  const a=document.createElement('a');
+  a.download='Ravenwood_Substitutes_'+document.getElementById('waDate').value+'.png';
+  a.href=window._waCanvas.toDataURL('image/png');a.click();
+}
+
+// ── SETTINGS ──
+function renderTimingEditor(){
+  const T=timings();
+  const brk=S.config.timings?.breaks||DEFAULT_TIMINGS.breaks;
+  document.getElementById('timingEditor').innerHTML=(T||[]).map((t,i)=>`
+    <div class="time-row">
+      <span class="lbl">${t.label}</span>
+      <input type="time" value="${t.start||''}" onchange="upTiming(${i},'start',this.value)" style="width:96px">
+      <span style="font-size:12px;color:var(--tx2)">to</span>
+      <input type="time" value="${t.end||''}" onchange="upTiming(${i},'end',this.value)" style="width:96px">
+      <span style="font-size:11px;color:var(--tx3)">${fmtTime(t.start)} – ${fmtTime(t.end)}</span>
+    </div>`).join('');
+  document.getElementById('fruitS').value=brk.fruitS||'09:10';
+  document.getElementById('fruitE').value=brk.fruitE||'09:20';
+  document.getElementById('lunchS').value=brk.lunchS||'11:20';
+  document.getElementById('lunchE').value=brk.lunchE||'11:40';
+  document.getElementById('curSeason').textContent=S.config.season==='summer'?'Summer':'Winter';
+  document.getElementById('btnSummer').className='btn btn-sm'+(S.config.season==='summer'?' btn-orange':'');
+  document.getElementById('btnWinter').className='btn btn-sm'+(S.config.season==='winter'?' btn-blue':'');
+}
+
+function upTiming(i,f,v){if(S.config.timings[S.config.season])S.config.timings[S.config.season][i][f]=v;}
+
+async function loadSeason(s){
+  S.config.season=s;await fbSet('config/season',s);
+  renderTimingEditor();renderTT();renderMorning();showGlobal('Switched to '+s,'ok');
+}
+async function saveTimings(){
+  S.config.timings.breaks={fruitS:document.getElementById('fruitS').value,fruitE:document.getElementById('fruitE').value,lunchS:document.getElementById('lunchS').value,lunchE:document.getElementById('lunchE').value};
+  await fbSet('config/timings',S.config.timings);
+  renderTimingEditor();renderTT();showGlobal('Timings saved!','ok');
+}
+
+function renderSubjList(){
+  document.getElementById('subjList').innerHTML=(S.subjects||[]).map(s=>`<span class="pill">${s}<span class="x" onclick="removeSubject('${s.replace(/'/g,"\\'")}')">×</span></span>`).join('');
+}
+async function addSubject(){
+  const v=document.getElementById('newSubj').value.trim();
+  if(!v||(S.subjects||[]).includes(v))return;
+  S.subjects.push(v);
+  const sObj={};S.subjects.forEach((x,i)=>sObj[i]=x);
+  await fbSet('subjects',sObj);
+  renderSubjList();populateAllSelects();document.getElementById('newSubj').value='';
+}
+async function removeSubject(s){
+  if(!confirm('Remove "'+s+'"?'))return;
+  S.subjects=S.subjects.filter(x=>x!==s);
+  const sObj={};S.subjects.forEach((x,i)=>sObj[i]=x);
+  await fbSet('subjects',sObj);
+  renderSubjList();populateAllSelects();
+}
+
+async function changePin(){
+  const cur=document.getElementById('curPin').value;
+  const np=document.getElementById('newPin').value;
+  const cp=document.getElementById('conPin').value;
+  const msg=document.getElementById('pinMsg');
+  if(cur!==S.config.pin){msg.style.color='var(--rd)';msg.textContent='Wrong PIN.';return;}
+  if(!/^\d{4}$/.test(np)){msg.style.color='var(--rd)';msg.textContent='Must be 4 digits.';return;}
+  if(np!==cp){msg.style.color='var(--rd)';msg.textContent='PINs do not match.';return;}
+  S.config.pin=np;await fbSet('config/pin',np);
+  msg.style.color='var(--gn)';msg.textContent='PIN updated!';
+  ['curPin','newPin','conPin'].forEach(id=>document.getElementById(id).value='');
+}
+
+function renderSettings(){
+  document.getElementById('setSchool').value=S.config.school||'';
+  document.getElementById('setYear').value=S.config.year||'';
+}
+async function saveSchoolInfo(){
+  S.config.school=document.getElementById('setSchool').value;
+  S.config.year=document.getElementById('setYear').value;
+  await fbSet('config',S.config);updateTopBar();showGlobal('Saved!','ok');
+}
+
+// ── TABS ──
+function showTab(tab,el){
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sec-'+tab).classList.add('active');
+  if(el)el.classList.add('active');
+  if(tab==='morning')renderMorning();
+  if(tab==='tt'){populateAllSelects();renderTT();}
+  if(tab==='teachers')renderTeachers();
+  if(tab==='leave'){populateAllSelects();renderLeaveTable();}
+  if(tab==='settings'){renderTimingEditor();renderSubjList();renderSettings();}
+}
+
+// ── DEFAULT DATA ──
+const DEFAULT_TEACHERS=[
+  {id:'t0',name:'Ms. SAPNA',cls:'DAFFODILS',role:'Primary Teacher',specialist:'0',minLevel:1,maxLevel:3,subjects:['EVS','English','Maths','Punjabi','Hindi','L.R','C.Skills']},
+  {id:'t1',name:'Ms. RASHMI',cls:'DAISY',role:'Primary Teacher',specialist:'0',minLevel:1,maxLevel:3,subjects:['Hindi','Punjabi','English','EVS','Maths']},
+  {id:'t2',name:'Ms. TANYA',cls:'ORCHID',role:'Primary Teacher',specialist:'0',minLevel:1,maxLevel:3,subjects:['English','Punjabi','EVS','Maths','Hindi','L.R']},
+  {id:'t3',name:'Ms. RAJNI',cls:'ROSE',role:'Primary Teacher',specialist:'0',minLevel:1,maxLevel:3,subjects:['English','EVS','Maths','Punjabi','Hindi','C.Skills']},
+  {id:'t4',name:'Ms. GARIMA',cls:'TULIP',role:'Primary Teacher',specialist:'0',minLevel:1,maxLevel:3,subjects:['Maths','English','EVS','Punjabi','Hindi','L.R','C.Skills']},
+  {id:'t5',name:'Ms. VEERPAL',cls:'EARTH',role:'Primary Teacher',specialist:'0',minLevel:2,maxLevel:4,subjects:['English','Maths','Punjabi','Hindi','EVS','C.Skills']},
+  {id:'t6',name:'Ms. GURPREET',cls:'JUPITER',role:'Primary Teacher',specialist:'0',minLevel:2,maxLevel:4,subjects:['Punjabi','Hindi','Maths','English','EVS','C.Skills']},
+  {id:'t7',name:'Ms. AJNU',cls:'MARS',role:'Primary Teacher',specialist:'0',minLevel:3,maxLevel:5,subjects:['Hindi','Maths','English','EVS','Punjabi','L.R']},
+  {id:'t8',name:'Ms. RAVEENA',cls:'NEPTUNE',role:'Primary Teacher',specialist:'0',minLevel:3,maxLevel:5,subjects:['Maths','English','Hindi','EVS','C.Skills','L.R']},
+  {id:'t9',name:'Ms. CHANCHAL',cls:'VENUS',role:'Primary Teacher',specialist:'0',minLevel:3,maxLevel:5,subjects:['Hindi','Maths','Punjabi','EVS','English']},
+  {id:'t10',name:'Ms. SHALLY',cls:'INDUS',role:'Middle School Teacher',specialist:'0',minLevel:4,maxLevel:6,subjects:['English','Punjabi','EVS','Hindi','Maths']},
+  {id:'t11',name:'Ms. SARAVJEET',cls:'NILE',role:'Middle School Teacher',specialist:'0',minLevel:4,maxLevel:6,subjects:['EVS','Punjabi','Hindi','English','Maths','C.Skills']},
+  {id:'t12',name:'Ms. BHAWNA',cls:'ARCTIC',role:'Middle School Teacher',specialist:'0',minLevel:5,maxLevel:7,subjects:['Hindi','English','Maths','EVS','Punjabi','L.R']},
+  {id:'t13',name:'Ms. ARPITA',cls:'ATLANTIC',role:'Middle School Teacher',specialist:'0',minLevel:5,maxLevel:7,subjects:['Maths','EVS','English','Punjabi','Hindi','L.R','C.Skills']},
+  {id:'t14',name:'Ms. MUSKAN',cls:'PACIFIC',role:'Middle School Teacher',specialist:'0',minLevel:5,maxLevel:7,subjects:['English','Punjabi','Maths','Hindi','EVS','L.R']},
+  {id:'t15',name:'Mr. SHUBHAM',cls:'Mt. Blanc',role:'Senior Teacher',specialist:'0',minLevel:5,maxLevel:8,subjects:['English','Punjabi','Hindi','S.S.T','Science','L.R','C.Skills']},
+  {id:'t16',name:'Ms. RAMANDEEP',cls:'Mt. ELBERT',role:'Senior Teacher',specialist:'0',minLevel:6,maxLevel:8,subjects:['Hindi','Maths','English','Punjabi','S.S.T','Science','L.R','C.Skills']},
+  {id:'t17',name:'Ms. AMANDEEP',cls:'Mt. EVEREST',role:'Senior Teacher',specialist:'0',minLevel:6,maxLevel:8,subjects:['Punjabi','Maths','English','S.S.T','Science','C.Skills']},
+  {id:'t18',name:'Ms. VANIKA',cls:'DARWIN',role:'Senior Teacher',specialist:'0',minLevel:7,maxLevel:9,subjects:['Science','Hindi','Maths','English','S.S.T','L.R']},
+  {id:'t19',name:'Ms. KIRAN',cls:'EINSTEIN',role:'Senior Teacher',specialist:'0',minLevel:7,maxLevel:9,subjects:['S.S.T','Science','Hindi','Maths','English','Punjabi','L.R']},
+  {id:'t20',name:'Ms. RAMANPREET',cls:'NEWTON',role:'Senior Teacher',specialist:'0',minLevel:8,maxLevel:10,subjects:['Science','S.S.T','Hindi','Maths','English','C.Skills']},
+  {id:'t21',name:'Ms. KHUSHBOO',cls:'DIAMOND',role:'Senior Teacher',specialist:'0',minLevel:8,maxLevel:10,subjects:['S.S.T','Science','English','Maths','Hindi','Punjabi','C.Skills']},
+  {id:'t22',name:'Ms. MEENAKSHI',cls:'PEARL',role:'Senior Teacher',specialist:'0',minLevel:9,maxLevel:12,subjects:['English','Science','Hindi','Maths','S.S.T','Punjabi']},
+  {id:'t23',name:'Mr. SANJAY',cls:'EMERALD',role:'Senior Teacher',specialist:'0',minLevel:9,maxLevel:12,subjects:['English','S.S.T','Science','Maths','Hindi','Punjabi','C.Skills']},
+  {id:'t24',name:'Ms. ANSHU M.',cls:'HORNBILL',role:'Senior Teacher',specialist:'0',minLevel:10,maxLevel:12,subjects:['Maths','English','S.S.T','Hindi','Punjabi','Science','L.R']},
+  {id:'t25',name:'Mr. MOHIT GARG',cls:'JAY',role:'Senior Teacher',specialist:'0',minLevel:10,maxLevel:12,subjects:['S.S.T','English','Maths','Science','Hindi','Punjabi','C.Skills','L.R']},
+  {id:'t26',name:'Mr. MOHIT GOYAL',cls:'PICASSO',role:'Senior Teacher',specialist:'0',minLevel:11,maxLevel:12,subjects:['Maths','English','Hindi','S.S.T','Science']},
+];
+
+const DEFAULT_CLASSES=[
+  {cls:'DAFFODILS',classNum:'KG',section:'DAFFODILS',level:1,ct:'Ms. SAPNA',schedule:{Monday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'EVS',type:'ct'},{subj:'English',type:'ct'},{subj:'Swimming/Sports',type:'specialist'},{subj:'Art',type:'specialist'},{subj:'Maths',type:'ct'},{subj:'Maths',type:'ct'},{subj:'EVS',type:'ct'}],Tuesday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'EVS',type:'ct'},{subj:'English',type:'ct'},{subj:'Swimming/Sports',type:'specialist'},{subj:'ICT (R)',type:'specialist'},{subj:'Maths',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'Hindi',type:'ct'}],Wednesday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'EVS',type:'ct'},{subj:'ICT (P)',type:'specialist'},{subj:'Punjabi',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'ICT (T)',type:'specialist'},{subj:'Maths',type:'ct'},{subj:'Maths',type:'ct'}],Thursday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'EVS',type:'ct'},{subj:'English',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'Skating',type:'specialist'},{subj:'Maths',type:'ct'},{subj:'ICT (T)',type:'specialist'}],Friday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'EVS',type:'ct'},{subj:'English',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'Library',type:'specialist'},{subj:'Dance',type:'specialist'},{subj:'Maths',type:'ct'}],Saturday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'L.R',type:'ct'},{subj:'C.Skills',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'',type:'ct'},{subj:'',type:'ct'},{subj:'',type:'ct'}]}},
+  {cls:'DAISY',classNum:'KG',section:'DAISY',level:1,ct:'Ms. RASHMI',schedule:{Monday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'Swimming/Sports',type:'specialist'},{subj:'EVS',type:'ct'},{subj:'Maths',type:'ct'},{subj:'ICT (T)',type:'specialist'},{subj:'English',type:'ct'}],Tuesday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'Swimming/Sports',type:'specialist'},{subj:'EVS',type:'ct'},{subj:'Maths',type:'ct'},{subj:'Maths',type:'ct'},{subj:'English',type:'ct'}],Wednesday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'English',type:'ct'},{subj:'Art',type:'specialist'},{subj:'EVS',type:'ct'},{subj:'Maths',type:'ct'},{subj:'ICT (T)',type:'specialist'}],Thursday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'English',type:'ct'},{subj:'Library',type:'specialist'},{subj:'EVS',type:'ct'},{subj:'Maths',type:'ct'},{subj:'Maths',type:'ct'}],Friday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'EVS',type:'ct'},{subj:'English',type:'ct'},{subj:'ICT (R)',type:'specialist'},{subj:'EVS',type:'ct'},{subj:'L.R',type:'ct'},{subj:'Maths',type:'ct'}],Saturday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'Dance',type:'specialist'},{subj:'Music',type:'specialist'},{subj:'English',type:'ct'},{subj:'',type:'ct'},{subj:'',type:'ct'},{subj:'',type:'ct'}]}},
+  {cls:'ORCHID',classNum:'KG',section:'ORCHID',level:1,ct:'Ms. TANYA',schedule:{Monday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'English',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'Skating',type:'specialist'},{subj:'EVS',type:'ct'},{subj:'Maths',type:'ct'},{subj:'Music',type:'specialist'},{subj:'Hindi',type:'ct'}],Tuesday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'English',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'Art',type:'specialist'},{subj:'EVS',type:'ct'},{subj:'Maths',type:'ct'},{subj:'ICT (T)',type:'specialist'},{subj:'Hindi',type:'ct'}],Wednesday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'English',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'Swimming/Sports',type:'specialist'},{subj:'Maths',type:'ct'},{subj:'L.R',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'EVS',type:'ct'}],Thursday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'English',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'Swimming/Sports',type:'specialist'},{subj:'Maths',type:'ct'},{subj:'ICT (T)',type:'specialist'},{subj:'Hindi',type:'ct'},{subj:'EVS',type:'ct'}],Friday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'English',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'Library',type:'specialist'},{subj:'EVS',type:'ct'},{subj:'Maths',type:'ct'},{subj:'Maths',type:'ct'},{subj:'Hindi',type:'ct'}],Saturday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'English',type:'ct'},{subj:'EVS',type:'ct'},{subj:'ICT (P)',type:'specialist'},{subj:'Dance',type:'specialist'},{subj:'',type:'ct'},{subj:'',type:'ct'},{subj:'',type:'ct'}]}},
+  {cls:'ROSE',classNum:'1',section:'ROSE',level:2,ct:'Ms. RAJNI',schedule:{Monday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'English',type:'ct'},{subj:'EVS',type:'ct'},{subj:'Maths',type:'ct'},{subj:'ICT (R)',type:'specialist'},{subj:'Library',type:'specialist'},{subj:'Punjabi',type:'ct'},{subj:'Hindi',type:'ct'}],Tuesday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'English',type:'ct'},{subj:'EVS',type:'ct'},{subj:'Maths',type:'ct'},{subj:'ICT (P)',type:'specialist'},{subj:'Music',type:'specialist'},{subj:'Punjabi',type:'ct'},{subj:'Hindi',type:'ct'}],Wednesday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'English',type:'ct'},{subj:'Maths',type:'ct'},{subj:'Swimming/Sports',type:'specialist'},{subj:'Dance',type:'specialist'},{subj:'Punjabi',type:'ct'},{subj:'C.Skills',type:'ct'},{subj:'EVS',type:'ct'}],Thursday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'English',type:'ct'},{subj:'EVS',type:'ct'},{subj:'Swimming/Sports',type:'specialist'},{subj:'Maths',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'English',type:'ct'},{subj:'Hindi',type:'ct'}],Friday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'English',type:'ct'},{subj:'ICT (T)',type:'specialist'},{subj:'Maths',type:'ct'},{subj:'Art',type:'specialist'},{subj:'Maths',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'Hindi',type:'ct'}],Saturday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Maths',type:'ct'},{subj:'ICT (T)',type:'specialist'},{subj:'Hindi',type:'ct'},{subj:'Skating',type:'specialist'},{subj:'',type:'ct'},{subj:'',type:'ct'},{subj:'',type:'ct'}]}},
+  {cls:'TULIP',classNum:'1',section:'TULIP',level:2,ct:'Ms. GARIMA',schedule:{Monday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Maths',type:'ct'},{subj:'English',type:'ct'},{subj:'Swimming/Sports',type:'specialist'},{subj:'Punjabi',type:'ct'},{subj:'L.R',type:'ct'},{subj:'Maths',type:'ct'},{subj:'Hindi',type:'ct'}],Tuesday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Maths',type:'ct'},{subj:'English',type:'ct'},{subj:'Swimming/Sports',type:'specialist'},{subj:'Punjabi',type:'ct'},{subj:'EVS',type:'ct'},{subj:'C.Skills',type:'ct'},{subj:'Hindi',type:'ct'}],Wednesday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Maths',type:'ct'},{subj:'English',type:'ct'},{subj:'Art',type:'specialist'},{subj:'ICT (T)',type:'specialist'},{subj:'Punjabi',type:'ct'},{subj:'EVS',type:'ct'},{subj:'Library',type:'specialist'}],Thursday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Maths',type:'ct'},{subj:'English',type:'ct'},{subj:'Dance',type:'specialist'},{subj:'ICT (T)',type:'specialist'},{subj:'Punjabi',type:'ct'},{subj:'EVS',type:'ct'},{subj:'Skating',type:'specialist'}],Friday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Maths',type:'ct'},{subj:'English',type:'ct'},{subj:'ICT (R)',type:'specialist'},{subj:'Music',type:'specialist'},{subj:'Punjabi',type:'ct'},{subj:'EVS',type:'ct'},{subj:'EVS',type:'ct'}],Saturday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Maths',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'EVS',type:'ct'},{subj:'ICT (P)',type:'specialist'},{subj:'',type:'ct'},{subj:'',type:'ct'},{subj:'',type:'ct'}]}},
+  {cls:'EARTH',classNum:'2',section:'EARTH',level:3,ct:'Ms. VEERPAL',schedule:{Monday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'English',type:'ct'},{subj:'Maths',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'ICT (T)',type:'specialist'},{subj:'Maths',type:'ct'},{subj:'EVS',type:'ct'}],Tuesday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'English',type:'ct'},{subj:'Maths',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'ICT (T)',type:'specialist'},{subj:'L.R',type:'ct'},{subj:'EVS',type:'ct'}],Wednesday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Swimming/Sports',type:'specialist'},{subj:'Swimming/Sports',type:'specialist'},{subj:'Maths',type:'ct'},{subj:'English',type:'ct'},{subj:'C.Skills',type:'ct'},{subj:'ICT (P)',type:'specialist'},{subj:'EVS',type:'ct'}],Thursday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'English',type:'ct'},{subj:'Maths',type:'ct'},{subj:'Art',type:'specialist'},{subj:'Hindi',type:'ct'},{subj:'ICT (R)',type:'specialist'},{subj:'Skating',type:'specialist'},{subj:'EVS',type:'ct'}],Friday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'English',type:'ct'},{subj:'Maths',type:'ct'},{subj:'Swimming/Sports',type:'specialist'},{subj:'Hindi',type:'ct'},{subj:'Music',type:'specialist'},{subj:'EVS',type:'ct'},{subj:'Punjabi',type:'ct'}],Saturday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'English',type:'ct'},{subj:'Maths',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'EVS',type:'ct'},{subj:'',type:'ct'},{subj:'',type:'ct'},{subj:'',type:'ct'}]}},
+  {cls:'ARCTIC',classNum:'6',section:'ARCTIC',level:6,ct:'Ms. BHAWNA',schedule:{Monday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'English',type:'ct'},{subj:'English',type:'ct'},{subj:'Maths',type:'ct'},{subj:'Swimming/Sports',type:'specialist'},{subj:'EVS',type:'ct'},{subj:'Punjabi',type:'ct'}],Tuesday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'ICT (R)',type:'specialist'},{subj:'English',type:'ct'},{subj:'Maths',type:'ct'},{subj:'Maths',type:'ct'},{subj:'Skating',type:'specialist'},{subj:'EVS',type:'ct'}],Wednesday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'L.R',type:'ct'},{subj:'English',type:'ct'},{subj:'Maths',type:'ct'},{subj:'Music',type:'specialist'},{subj:'Punjabi',type:'ct'},{subj:'EVS',type:'ct'}],Thursday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'ICT (T)',type:'specialist'},{subj:'English',type:'ct'},{subj:'Maths',type:'ct'},{subj:'Library',type:'specialist'},{subj:'Maths',type:'ct'},{subj:'EVS',type:'ct'}],Friday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'ICT (P)',type:'specialist'},{subj:'English',type:'ct'},{subj:'Maths',type:'ct'},{subj:'Art',type:'specialist'},{subj:'Punjabi',type:'ct'},{subj:'EVS',type:'ct'}],Saturday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Dance',type:'specialist'},{subj:'ICT (T)',type:'specialist'},{subj:'Swimming/Sports',type:'specialist'},{subj:'',type:'ct'},{subj:'',type:'ct'},{subj:'',type:'ct'},{subj:'',type:'ct'}]}},
+  {cls:'ATLANTIC',classNum:'6',section:'ATLANTIC',level:6,ct:'Ms. ARPITA',schedule:{Monday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Maths',type:'ct'},{subj:'EVS',type:'ct'},{subj:'English',type:'ct'},{subj:'ICT (T)',type:'specialist'},{subj:'Swimming/Sports',type:'specialist'},{subj:'Punjabi',type:'ct'},{subj:'C.Skills',type:'ct'}],Tuesday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Maths',type:'ct'},{subj:'EVS',type:'ct'},{subj:'Library',type:'specialist'},{subj:'English',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'Music',type:'specialist'},{subj:'Punjabi',type:'ct'}],Wednesday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Maths',type:'ct'},{subj:'EVS',type:'ct'},{subj:'English',type:'ct'},{subj:'English',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'Dance',type:'specialist'},{subj:'Punjabi',type:'ct'}],Thursday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Maths',type:'ct'},{subj:'EVS',type:'ct'},{subj:'English',type:'ct'},{subj:'ICT (R)',type:'specialist'},{subj:'Hindi',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'Art',type:'specialist'}],Friday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Maths',type:'ct'},{subj:'EVS',type:'ct'},{subj:'English',type:'ct'},{subj:'Skating',type:'specialist'},{subj:'Hindi',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'Punjabi',type:'ct'}],Saturday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Maths',type:'ct'},{subj:'L.R',type:'ct'},{subj:'Swimming/Sports',type:'specialist'},{subj:'',type:'ct'},{subj:'',type:'ct'},{subj:'',type:'ct'},{subj:'',type:'ct'}]}},
+  {cls:'DARWIN',classNum:'8',section:'DARWIN',level:8,ct:'Ms. VANIKA',schedule:{Monday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Science',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'Maths',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'English',type:'ct'},{subj:'S.S.T',type:'ct'},{subj:'Swimming/Sports',type:'specialist'}],Tuesday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Skating',type:'specialist'},{subj:'Hindi',type:'ct'},{subj:'Maths',type:'ct'},{subj:'Science',type:'ct'},{subj:'English',type:'ct'},{subj:'Dance',type:'specialist'},{subj:'L.R',type:'ct'}],Wednesday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Science',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'Maths',type:'ct'},{subj:'ICT (T)',type:'specialist'},{subj:'English',type:'ct'},{subj:'Music',type:'specialist'},{subj:'Punjabi',type:'ct'}],Thursday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'ICT (P)',type:'specialist'},{subj:'Hindi',type:'ct'},{subj:'Maths',type:'ct'},{subj:'Science',type:'ct'},{subj:'English',type:'ct'},{subj:'Art',type:'specialist'},{subj:'Punjabi',type:'ct'}],Friday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'ICT (R)',type:'specialist'},{subj:'Hindi',type:'ct'},{subj:'Maths',type:'ct'},{subj:'Science',type:'ct'},{subj:'English',type:'ct'},{subj:'Library',type:'specialist'},{subj:'Punjabi',type:'ct'}],Saturday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Swimming/Sports',type:'specialist'},{subj:'Swimming/Sports',type:'specialist'},{subj:'Maths',type:'ct'},{subj:'Science',type:'ct'},{subj:'English',type:'ct'},{subj:'S.S.T',type:'ct'},{subj:'Punjabi',type:'ct'}]}},
+  {cls:'NEWTON',classNum:'9',section:'NEWTON',level:9,ct:'Ms. RAMANPREET',schedule:{Monday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Science',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'S.S.T',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'Maths',type:'ct'},{subj:'English',type:'ct'},{subj:'Swimming/Sports',type:'specialist'}],Tuesday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Science',type:'ct'},{subj:'Science',type:'ct'},{subj:'S.S.T',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'Maths',type:'ct'},{subj:'English',type:'ct'},{subj:'ICT (T)',type:'specialist'}],Wednesday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Science',type:'ct'},{subj:'Science',type:'ct'},{subj:'S.S.T',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'Maths',type:'ct'},{subj:'English',type:'ct'},{subj:'ICT (P)',type:'specialist'}],Thursday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Science',type:'ct'},{subj:'Science',type:'ct'},{subj:'S.S.T',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'Maths',type:'ct'},{subj:'English',type:'ct'},{subj:'ICT (R)',type:'specialist'}],Friday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Science',type:'ct'},{subj:'Science',type:'ct'},{subj:'S.S.T',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'Maths',type:'ct'},{subj:'English',type:'ct'},{subj:'Art',type:'specialist'}],Saturday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Swimming/Sports',type:'specialist'},{subj:'Swimming/Sports',type:'specialist'},{subj:'S.S.T',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'Maths',type:'ct'},{subj:'English',type:'ct'},{subj:'C.Skills',type:'ct'}]}},
+  {cls:'HORNBILL',classNum:'11',section:'HORNBILL',level:11,ct:'Ms. ANSHU M.',schedule:{Monday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Maths',type:'ct'},{subj:'English',type:'ct'},{subj:'S.S.T',type:'ct'},{subj:'Dance',type:'specialist'},{subj:'Hindi',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'Science',type:'ct'}],Tuesday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Maths',type:'ct'},{subj:'English',type:'ct'},{subj:'S.S.T',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'L.R',type:'ct'},{subj:'Skating',type:'specialist'}],Wednesday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Maths',type:'ct'},{subj:'English',type:'ct'},{subj:'S.S.T',type:'ct'},{subj:'Music',type:'specialist'},{subj:'Hindi',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'Science',type:'ct'}],Thursday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Maths',type:'ct'},{subj:'English',type:'ct'},{subj:'S.S.T',type:'ct'},{subj:'Hindi',type:'ct'},{subj:'Swimming/Sports',type:'specialist'},{subj:'Science',type:'ct'},{subj:'ICT (T)',type:'specialist'}],Friday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Maths',type:'ct'},{subj:'English',type:'ct'},{subj:'S.S.T',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'Swimming/Sports',type:'specialist'},{subj:'Science',type:'ct'},{subj:'ICT (T)',type:'specialist'}],Saturday:[{subj:'Assembly/Yoga',type:'ct'},{subj:'Maths',type:'ct'},{subj:'English',type:'ct'},{subj:'S.S.T',type:'ct'},{subj:'Library',type:'specialist'},{subj:'Hindi',type:'ct'},{subj:'Punjabi',type:'ct'},{subj:'Science',type:'ct'}]}},
+];
+
+// ── START ──
+window.onload=function(){ initApp(); };
+</script>
+</body>
+</html>
